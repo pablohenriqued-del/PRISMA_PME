@@ -1,0 +1,45 @@
+{
+  "summary": "Iteration 2 testing (Twilio WhatsApp, Team invites, Documents upload/download to Emergent Object Storage, Automation engine + runs). Backend: 14/14 pytest cases passed. Frontend: nav-equipe/Team, Documentos dropzone+upload+download, Automações tabs+test+runs, CRM lead-phone, WA config badge all verified. Twilio channel-not-enabled scenarios return status='error/skipped' without 5xx as expected. Multi-tenant scoping preserved (all queries use org_id).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Dialogs (invite/new-doc/new-auto/edit-auto/new-chat)", "issues": ["Radix DialogContent missing aria-describedby / DialogDescription — console a11y warning (already flagged in iteration 1)."]},
+      {"screen": "Dashboard charts", "issues": ["Recharts width(-1)/height(-1) warnings on initial mount (harmless, from iteration 1)."]},
+      {"screen": "Documentos card actions", "issues": ["Download/Delete icons only appear on hover (opacity-0 → group-hover:opacity-100). Data-testid remains in DOM so tests pass, but touch/keyboard users cannot access them. Consider always-visible on small screens."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_2.py",
+    "/app/backend/tests/test_nucleo_ia.py",
+    "/app/test_reports/pytest/iteration_2.xml"
+  ],
+  "action_items": [
+    "(Optional) Make document card actions (download/delete) keyboard-accessible; hover-only hides them from touch/a11y users.",
+    "(Optional) Add DialogDescription/aria-describedby to invite/new-doc/new-auto/edit-auto/new-chat DialogContent to silence Radix a11y warnings.",
+    "(Optional) WhatsApp outgoing when Twilio channel isn't WA-enabled: server correctly stores delivery='mock' (fallback) — verified. Consider surfacing a toast when Twilio attempt returned error so operator knows message went via mock only."
+  ],
+  "critical_code_review_comments": [
+    "server.py grew to 924 lines — still recommended to split into modules (auth, crm, wa, documents, automations, team, copilot).",
+    "download_doc uses ad-hoc `auth` query param fallback in addition to cookie+bearer; that param isn't documented and not used by UI. Either remove or document (`?auth=<token>` currently works as an auth bypass surface).",
+    "Team change_role endpoint allows owner to change ANY user in the org including themselves; safeguard to prevent org losing its only owner (demoting self when sole owner) is missing.",
+    "wa_webhook is public (no signature validation). Twilio X-Twilio-Signature check should be added before production.",
+    "PATCH /crm/leads only supports {stage,phone} — other fields (name/email/value/company/notes) cannot be updated after creation.",
+    "storage_put/storage_get are synchronous (blocking pyrequests) inside async endpoints — will block the event loop on large uploads. Use httpx.AsyncClient.",
+    "Automation engine: no per-org rate limiting or de-dup, so a burst of leads can trigger many WA/email calls — consider a simple debounce or per-run guard."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_2.py (new)"
+  ],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "100%"},
+  "test_credentials": "session_token=test_session_1785228939986 for test.user@example.com in org-1785228939986 (owner). Bearer or cookie.",
+  "seed_data_creation": "Backend tests create TEST_-prefixed leads/finance/automations/chats/docs and delete them at end. UI test uploaded 'TEST_ui_upload.txt' (left in storage) and 'TEST_it2_outgoing' outbound message. Two team invites created during UI testing were cleaned up. One inbound webhook chat 'TEST WA User' (+5511999998888) left for reference.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 4 iteration-2 features are green. When testing WhatsApp send with provider='auto': Twilio returns HTTP 400 'Channel not found' (test number +19788384904 not WA-enabled) and server falls back to delivery='mock' with 200 — this is expected. Team invites use email 'delivered@resend.dev' (Resend sandbox recipient). Automation runs logged in db.automation_runs; visible via GET /api/automations/runs. New Equipe nav testid is 'nav-equipe' (lowercase, no accent). To bypass CRA's webpack-dev-server error overlay iframe during Playwright, remove element with id 'webpack-dev-server-client-overlay' via page.evaluate.",
+  "rca of the issue": "N/A — no bugs found."
+}

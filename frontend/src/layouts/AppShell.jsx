@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import Copilot from "@/components/Copilot";
 import CommandPalette from "@/components/CommandPalette";
 
+import { UserCog } from "lucide-react";
 const NAV = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/app/crm", label: "CRM", icon: Users2 },
@@ -18,6 +19,7 @@ const NAV = [
   { to: "/app/financeiro", label: "Financeiro", icon: Wallet },
   { to: "/app/documentos", label: "Documentos", icon: FileText },
   { to: "/app/automacoes", label: "Automações", icon: Zap },
+  { to: "/app/equipe", label: "Equipe", icon: UserCog },
 ];
 
 export default function AppShell() {

@@ -23,7 +23,7 @@ const brl = (n) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currenc
 export default function CRM() {
   const [leads, setLeads] = useState([]);
   const [openNew, setOpenNew] = useState(false);
-  const [form, setForm] = useState({ name: "", company: "", email: "", value: 0, stage: "Lead" });
+  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", value: 0, stage: "Lead" });
 
   const load = async () => { const r = await api.get("/crm/leads"); setLeads(r.data.items); };
   useEffect(() => { load(); }, []);
@@ -32,7 +32,7 @@ export default function CRM() {
     e.preventDefault();
     await api.post("/crm/leads", { ...form, value: Number(form.value) || 0 });
     toast.success("Lead criado");
-    setForm({ name: "", company: "", email: "", value: 0, stage: "Lead" });
+    setForm({ name: "", company: "", email: "", phone: "", value: 0, stage: "Lead" });
     setOpenNew(false);
     load();
   };
@@ -77,6 +77,7 @@ export default function CRM() {
                 <div><Label>Nome</Label><Input required data-testid="lead-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div><Label>Empresa</Label><Input data-testid="lead-company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
                 <div><Label>Email</Label><Input type="email" data-testid="lead-email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                <div><Label>WhatsApp (E.164)</Label><Input data-testid="lead-phone" placeholder="+5511999999999" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 <div><Label>Valor estimado (R$)</Label><Input type="number" data-testid="lead-value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></div>
                 <div>
                   <Label>Estágio</Label>

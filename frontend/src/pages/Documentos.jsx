@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from "react";
-import api from "@/lib/api";
+import React, { useEffect, useState, useRef } from "react";
+import api, { API_BASE } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Plus, Trash2, Filter } from "lucide-react";
+import { FileText, Plus, Trash2, Filter, UploadCloud, Download, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 const KIND_COLOR = {
@@ -20,19 +20,51 @@ export default function Documentos() {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("todos");
   const [form, setForm] = useState({ title: "", kind: "geral", size: 0 });
+  const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadKind, setUploadKind] = useState("geral");
+  const fileRef = useRef(null);
 
   const load = async () => { const r = await api.get("/documents"); setDocs(r.data.items); };
   useEffect(() => { load(); }, []);
+
+  const uploadFiles = async (files) => {
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    try {
+      for (const f of Array.from(files)) {
+        const fd = new FormData();
+        fd.append("file", f);
+        fd.append("kind", uploadKind);
+        await api.post("/documents/upload", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      }
+      toast.success(`${files.length} arquivo(s) enviado(s)`);
+      load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Falha no upload");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const create = async (e) => {
     e.preventDefault();
     await api.post("/documents", { ...form, size: Number(form.size) || 0 });
     setForm({ title: "", kind: "geral", size: 0 });
-    setOpen(false);
-    load();
+    setOpen(false); load();
     toast.success("Documento registrado");
   };
   const del = async (id) => { await api.delete(`/documents/${id}`); load(); };
+
+  const download = async (doc) => {
+    try {
+      const r = await api.get(`/documents/${doc.doc_id}/download`, { responseType: "blob" });
+      const url = URL.createObjectURL(r.data);
+      const a = document.createElement("a");
+      a.href = url; a.download = doc.title; document.body.appendChild(a); a.click();
+      setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
+    } catch { toast.error("Não foi possível baixar"); }
+  };
 
   const list = docs.filter((d) => filter === "todos" || d.kind === filter);
 
@@ -58,9 +90,9 @@ export default function Documentos() {
             </Select>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="new-doc-btn"><Plus className="h-4 w-4 mr-2" />Novo documento</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="outline" className="h-10 border-black/10" data-testid="new-doc-btn"><Plus className="h-4 w-4 mr-2" />Registro manual</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
-              <DialogHeader><DialogTitle>Registrar documento</DialogTitle></DialogHeader>
+              <DialogHeader><DialogTitle>Registrar documento (sem arquivo)</DialogTitle></DialogHeader>
               <form onSubmit={create} className="space-y-4 pt-2">
                 <div><Label>Título</Label><Input required data-testid="doc-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
                 <div><Label>Tipo</Label>
@@ -74,11 +106,43 @@ export default function Documentos() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div><Label>Tamanho (bytes)</Label><Input type="number" data-testid="doc-size" value={form.size} onChange={(e) => setForm({ ...form, size: e.target.value })} /></div>
                 <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-doc">Salvar</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
+        </div>
+      </div>
+
+      {/* Dropzone */}
+      <div
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => { e.preventDefault(); setDragOver(false); uploadFiles(e.dataTransfer.files); }}
+        className={`rounded-md border-2 border-dashed transition-colors p-8 bg-white flex items-center gap-6 ${dragOver ? "border-[hsl(var(--ink))] bg-black/[0.02]" : "border-black/15"}`}
+        data-testid="dropzone"
+      >
+        <div className="h-14 w-14 rounded-md bg-black/5 flex items-center justify-center">
+          {uploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <UploadCloud className="h-6 w-6" strokeWidth={1.6} />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="font-display text-lg">Arraste arquivos aqui</div>
+          <div className="text-sm text-black/60 mt-1">PDFs, imagens, contratos — armazenamento gerenciado. Multi-tenant por organização.</div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Select value={uploadKind} onValueChange={setUploadKind}>
+            <SelectTrigger className="w-32 h-10" data-testid="upload-kind"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="contrato">Contrato</SelectItem>
+              <SelectItem value="proposta">Proposta</SelectItem>
+              <SelectItem value="fiscal">Fiscal</SelectItem>
+              <SelectItem value="geral">Geral</SelectItem>
+            </SelectContent>
+          </Select>
+          <input ref={fileRef} type="file" multiple className="hidden" onChange={(e) => uploadFiles(e.target.files)} data-testid="file-input" />
+          <Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" onClick={() => fileRef.current?.click()} data-testid="upload-btn" disabled={uploading}>
+            {uploading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+            Selecionar arquivo
+          </Button>
         </div>
       </div>
 
@@ -94,9 +158,16 @@ export default function Documentos() {
               <span>·</span>
               <span className="font-mono">{Math.round((d.size || 0) / 1024)} KB</span>
             </div>
-            <button data-testid={`del-doc-${d.doc_id}`} onClick={() => del(d.doc_id)} className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-black/40 hover:text-red-600">
-              <Trash2 className="h-4 w-4" />
-            </button>
+            <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+              {d.storage_path && (
+                <button data-testid={`download-doc-${d.doc_id}`} onClick={() => download(d)} className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-black/5 text-black/50 hover:text-black">
+                  <Download className="h-4 w-4" />
+                </button>
+              )}
+              <button data-testid={`del-doc-${d.doc_id}`} onClick={() => del(d.doc_id)} className="h-7 w-7 rounded-md flex items-center justify-center hover:bg-black/5 text-black/40 hover:text-red-600">
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         ))}
         {list.length === 0 && <div className="col-span-full border border-dashed border-black/10 rounded-md p-10 text-center text-sm text-black/40">Nenhum documento nesta categoria</div>}

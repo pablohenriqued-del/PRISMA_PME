@@ -13,6 +13,7 @@ import Projetos from "@/pages/Projetos";
 import Financeiro from "@/pages/Financeiro";
 import Documentos from "@/pages/Documentos";
 import Automacoes from "@/pages/Automacoes";
+import Team from "@/pages/Team";
 
 function AppRouter() {
   const location = useLocation();
@@ -32,6 +33,7 @@ function AppRouter() {
         <Route path="financeiro" element={<Financeiro />} />
         <Route path="documentos" element={<Documentos />} />
         <Route path="automacoes" element={<Automacoes />} />
+        <Route path="equipe" element={<Team />} />
       </Route>
       <Route path="*" element={<Navigate to="/app" replace />} />
     </Routes>
