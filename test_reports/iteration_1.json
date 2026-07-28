@@ -1,0 +1,34 @@
+{
+  "summary": "First-run testing of Núcleo IA. Backend: 13/13 pytest cases passed (auth, dashboard, CRM CRUD, WhatsApp, projetos, financeiro, documentos, automações, Copilot SSE streaming w/ Claude Sonnet 4.5). Frontend: login page, /app dashboard (no redirect), all sidebar navs, KPI grid, CRM kanban + new-lead flow, WhatsApp chat send, command palette, Copilot panel all present and functional. Multi-tenant isolation verified (unauth returns 401; data scoped to org-1785228939986).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Copilot & CommandPalette dialogs", "issues": ["Console warnings: DialogContent is missing DialogTitle and aria-describedby (Radix accessibility)."]},
+      {"screen": "Dashboard charts", "issues": ["Recharts logs width/height(-1) warning on initial mount (harmless but noisy)."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_nucleo_ia.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Optional) Add VisuallyHidden DialogTitle + DialogDescription to Copilot Sheet and CommandPalette DialogContent to silence Radix a11y warnings.",
+    "(Optional) Fix Recharts container min height/width to avoid width(-1) warnings.",
+    "Verify visually that streamed Copilot response is actually rendered inside data-testid=copilot-panel (backend streams correctly; UI panel showed only user prompt in the screenshot — worth a manual glance)."
+  ],
+  "critical_code_review_comments": [
+    "server.py: after insert_one docs mostly pop _id, but LlmChat SDK requires available; ok. Consider using PyObjectId exclusion via projection at insert time is unnecessary — current pattern is fine.",
+    "AppShell sidebar testid uses raw label lower-case incl. non-ASCII 'nav-automações' — works but consider ASCII 'nav-automacoes' for robustness across tools.",
+    "server.py is 600+ lines — split by module (auth/crm/wa/projects/finance/docs/automations/copilot) for maintainability.",
+    "current_user checks cookie then Authorization header — good; but CORS allow_origins uses env fallback '*' with allow_credentials=True which browsers reject; ensure CORS_ORIGINS is set explicitly in prod."
+  ],
+  "updated_files": ["/app/backend/tests/test_nucleo_ia.py"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "session_token=test_session_1785228939986 (Authorization Bearer or cookie). Email test.user@example.com, org-1785228939986.",
+  "seed_data_creation": "None (used pre-seeded data). Tests create/delete TEST_-prefixed entities but a couple of TEST_ leftovers may remain (e.g. TEST_Chat, TEST_Proj, TEST_Task, TEST UI Lead) — safe to ignore for tenant.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Backend fully green. Frontend uses httpOnly cookie (must set via context.add_cookies with domain pme-all-in-one.preview.emergentagent.com before goto /app). CRM new-lead dialog testids: new-lead-btn, lead-name, lead-company, lead-value, save-lead-btn. WhatsApp chat items use data-testid^='wa-chat-'. Copilot SSE takes ~5-15s; UI streaming into panel may need visual re-verification."
+}
