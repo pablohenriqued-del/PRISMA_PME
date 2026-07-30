@@ -431,33 +431,53 @@ const MODULES = [
 
 const PLANS = [
   {
-    name: "Starter", price: "R$ 900", per: "/mês",
+    key: "free",
+    name: "Free",
+    monthly: 0,
+    tag: "Grátis pra sempre",
+    features: ["1 usuário", "CRM (até 50 leads)", "Copiloto 50 msgs/mês", "WhatsApp mock", "Documentos 200 MB"],
+    cta: "Começar grátis",
+    highlight: false,
+    small: true,
+  },
+  {
+    key: "starter",
+    name: "Starter",
+    monthly: 297,
     tag: "Solopreneur",
-    features: ["1 usuário", "CRM + WhatsApp mock", "Copiloto 200 msgs/mês", "Documentos 1GB"],
-    cta: "Começar grátis por 14 dias",
+    features: ["1 usuário", "CRM ilimitado", "WhatsApp mock", "Copiloto 500 msgs/mês", "Documentos 2 GB"],
+    cta: "Testar 30 dias",
     highlight: false,
   },
   {
-    name: "Growth", price: "R$ 2.500", per: "/mês",
+    key: "growth",
+    name: "Growth",
+    monthly: 897,
     tag: "Recomendado",
-    features: ["Até 5 usuários", "WhatsApp real (Twilio)", "Copiloto ilimitado", "Automações ilimitadas", "Documentos 20GB"],
-    cta: "Assinar Growth",
+    features: ["Até 5 usuários", "WhatsApp real (Twilio)", "Copiloto ilimitado", "Automações ilimitadas", "Documentos 50 GB"],
+    cta: "Testar 30 dias",
     highlight: true,
   },
   {
-    name: "Business", price: "R$ 6.000", per: "/mês",
+    key: "business",
+    name: "Business",
+    monthly: 2997,
     tag: "Times crescendo",
-    features: ["Usuários ilimitados", "SLA de suporte", "Onboarding assistido", "API pública", "Documentos 200GB"],
+    features: ["Usuários ilimitados", "SLA 4h de suporte", "Onboarding assistido", "API pública", "Documentos 500 GB"],
     cta: "Falar com vendas",
     highlight: false,
   },
 ];
+
+const brl = (n) => n.toLocaleString("pt-BR", { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+const annualPerMonth = (m) => Math.round((m * 10) / 12); // 2 meses grátis ≈ -17%
 
 export default function Landing() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [tick, setTick] = useState(0);
+  const [billing, setBilling] = useState("monthly");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -548,7 +568,7 @@ export default function Landing() {
               </a>
               <div className="flex items-center gap-2 text-xs text-black/50">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Sem cartão · 14 dias grátis
+                Free pra sempre · 30 dias grátis nos planos pagos
               </div>
             </div>
           </div>
@@ -749,58 +769,127 @@ export default function Landing() {
             <h2 className="tracking-[-0.02em] leading-[1.05]" style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(40px, 5vw, 68px)" }}>
               Simples. <em className="italic">Como deveria ser.</em>
             </h2>
-            <p className="mt-5 text-black/70">Comece grátis por 14 dias. Sem cartão. Cancele quando quiser.</p>
+            <p className="mt-5 text-black/70">Free pra sempre. 30 dias grátis em qualquer plano pago · cancele quando quiser.</p>
           </div>
 
-          <div className="mt-14 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-5xl mx-auto">
-            {PLANS.map((p, i) => (
-              <div key={p.name}
-                   data-testid={`plan-${p.name.toLowerCase()}`}
-                   className={`relative rounded-lg p-8 flex flex-col ${
-                     p.highlight
-                       ? "bg-[#0A0A14] text-[#F5F1EA] shadow-[0_30px_60px_-15px_rgba(10,10,20,0.5)]"
-                       : "bg-white border border-black/10"
-                   }`}>
-                {p.highlight && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-medium"
-                       style={{
-                         background: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
-                         color: "#0A0A14",
-                       }}>
-                    {p.tag}
+          {/* Billing toggle */}
+          <div className="mt-10 flex items-center justify-center gap-4">
+            <div className="inline-flex items-center bg-white border border-black/10 rounded-full p-1" data-testid="billing-toggle">
+              <button
+                onClick={() => setBilling("monthly")}
+                data-testid="billing-monthly"
+                className={`px-5 h-9 rounded-full text-sm transition-colors ${billing === "monthly" ? "bg-[#0A0A14] text-[#F5F1EA]" : "text-black/60 hover:text-black"}`}
+              >
+                Mensal
+              </button>
+              <button
+                onClick={() => setBilling("annual")}
+                data-testid="billing-annual"
+                className={`px-5 h-9 rounded-full text-sm transition-colors flex items-center gap-2 ${billing === "annual" ? "bg-[#0A0A14] text-[#F5F1EA]" : "text-black/60 hover:text-black"}`}
+              >
+                Anual
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${billing === "annual" ? "bg-white/15 text-white" : "bg-emerald-50 text-emerald-700"}`}>−17%</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Plans grid */}
+          <div className="mt-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-6xl mx-auto">
+            {PLANS.map((p, i) => {
+              const displayed = billing === "annual" ? annualPerMonth(p.monthly) : p.monthly;
+              const isFree = p.monthly === 0;
+              return (
+                <div key={p.key}
+                     data-testid={`plan-${p.key}`}
+                     className={`relative rounded-lg p-7 flex flex-col ${
+                       p.highlight
+                         ? "bg-[#0A0A14] text-[#F5F1EA] shadow-[0_30px_60px_-15px_rgba(10,10,20,0.5)]"
+                         : "bg-white border border-black/10"
+                     }`}>
+                  {p.highlight && (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] uppercase tracking-widest font-medium whitespace-nowrap"
+                         style={{ background: `linear-gradient(90deg, ${SPECTRUM.join(",")})`, color: "#0A0A14" }}>
+                      {p.tag}
+                    </div>
+                  )}
+                  <div className="text-xs uppercase tracking-widest opacity-60">{p.name}</div>
+
+                  <div className="mt-4 flex items-baseline gap-1.5 min-h-[60px]">
+                    {isFree ? (
+                      <span style={{ fontFamily: "'Fraunces', serif", fontSize: 44 }} className="tracking-tight">R$ 0</span>
+                    ) : (
+                      <>
+                        <span className="text-lg opacity-60">R$</span>
+                        <span style={{ fontFamily: "'Fraunces', serif", fontSize: 44 }} className="tracking-tight" data-testid={`price-${p.key}`}>{brl(displayed)}</span>
+                        <span className="text-sm opacity-70">/mês</span>
+                      </>
+                    )}
                   </div>
-                )}
-                <div className="text-xs uppercase tracking-widest opacity-60">{p.name}</div>
-                <div className="mt-4 flex items-baseline gap-1.5">
-                  <span style={{ fontFamily: "'Fraunces', serif", fontSize: 48 }} className="tracking-tight">{p.price}</span>
-                  <span className="text-sm opacity-70">{p.per}</span>
+                  {!isFree && billing === "annual" && (
+                    <div className="text-[11px] opacity-60 -mt-1">Cobrado R$ {brl(displayed * 12)} anual</div>
+                  )}
+                  {!p.highlight && <div className="text-xs text-black/50 mt-1">{p.tag}</div>}
+
+                  <ul className="mt-6 space-y-2.5 flex-1">
+                    {p.features.map((f) => (
+                      <li key={f} className="flex items-start gap-2.5 text-sm">
+                        <div className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${p.highlight ? "bg-white/15" : "bg-black/5"}`}>
+                          <Check className="h-3 w-3" strokeWidth={2.2} />
+                        </div>
+                        <span className={p.highlight ? "text-white/85" : "text-black/70"}>{f}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <button
+                    onClick={primaryCta}
+                    data-testid={`plan-cta-${p.key}`}
+                    className={`mt-7 h-11 rounded-md text-sm font-medium transition-colors ${
+                      p.highlight
+                        ? "bg-[#F5F1EA] text-[#0A0A14] hover:bg-white"
+                        : isFree
+                          ? "border border-black/15 bg-white text-[#0A0A14] hover:bg-black/5"
+                          : "bg-[#0A0A14] text-[#F5F1EA] hover:bg-black"
+                    }`}
+                  >
+                    {p.cta}
+                  </button>
                 </div>
-                {!p.highlight && <div className="text-xs text-black/50 mt-1">{p.tag}</div>}
+              );
+            })}
+          </div>
 
-                <ul className="mt-6 space-y-3 flex-1">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-3 text-sm">
-                      <div className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${p.highlight ? "bg-white/15" : "bg-black/5"}`}>
-                        <Check className="h-3 w-3" strokeWidth={2.2} />
-                      </div>
-                      <span className={p.highlight ? "text-white/85" : "text-black/70"}>{f}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <button
-                  onClick={primaryCta}
-                  data-testid={`plan-cta-${p.name.toLowerCase()}`}
-                  className={`mt-8 h-11 rounded-md text-sm font-medium transition-colors ${
-                    p.highlight
-                      ? "bg-[#F5F1EA] text-[#0A0A14] hover:bg-white"
-                      : "bg-[#0A0A14] text-[#F5F1EA] hover:bg-black"
-                  }`}
-                >
-                  {p.cta}
-                </button>
+          {/* Founder Deal — discrete card */}
+          <div className="mt-10 max-w-5xl mx-auto rounded-lg border border-black/10 bg-white p-6 md:p-8 flex flex-col md:flex-row items-start md:items-center gap-6 relative overflow-hidden" data-testid="founder-deal">
+            <div className="absolute top-0 left-0 right-0 h-[3px] flex opacity-90 pointer-events-none">
+              {SPECTRUM.map((c) => <div key={c} style={{ background: c, flex: 1 }} />)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-[10px] uppercase tracking-widest text-black/50">Oferta fundadora · limitada</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
               </div>
-            ))}
+              <div className="flex items-baseline gap-3 flex-wrap">
+                <div style={{ fontFamily: "'Fraunces', serif", fontSize: 36 }} className="tracking-tight leading-none">R$ 4.997</div>
+                <div className="text-sm text-black/60">pagamento único</div>
+              </div>
+              <p className="mt-3 text-sm text-black/65 leading-relaxed max-w-2xl">
+                <b>3 anos de Growth</b> incluídos, para os primeiros <b>100 fundadores</b>. Trave o preço agora — o plano vira Growth normal depois de 36 meses.
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-[11px] text-black/50">
+                <div className="h-1 w-32 rounded-full bg-black/10 overflow-hidden">
+                  <div className="h-full bg-[#0A0A14]" style={{ width: "43%" }} />
+                </div>
+                <span className="font-mono" data-testid="founder-remaining">57 vagas restantes</span>
+              </div>
+            </div>
+            <button
+              onClick={primaryCta}
+              data-testid="founder-cta"
+              className="shrink-0 h-11 px-6 rounded-md bg-[#0A0A14] text-[#F5F1EA] text-sm hover:bg-black transition-colors whitespace-nowrap"
+            >
+              Reservar minha vaga
+            </button>
           </div>
         </div>
       </section>
@@ -824,7 +913,7 @@ export default function Landing() {
             Começar em 30 segundos
             <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </button>
-          <div className="mt-4 text-xs text-black/50">14 dias grátis · Sem cartão · Login com Google</div>
+          <div className="mt-4 text-xs text-black/50">Free pra sempre · 30 dias grátis nos planos pagos · Login com Google</div>
         </div>
       </section>
 
