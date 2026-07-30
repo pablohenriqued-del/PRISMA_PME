@@ -429,8 +429,13 @@ async def create_lead(body: LeadIn, user: dict = Depends(current_user)):
     return doc
 
 class LeadUpdate(BaseModel):
-    stage: Optional[str] = None
+    name: Optional[str] = None
+    company: Optional[str] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
+    value: Optional[float] = None
+    stage: Optional[str] = None
+    notes: Optional[str] = None
 
 @api.patch("/crm/leads/{lead_id}")
 async def update_lead(lead_id: str, body: LeadUpdate, user: dict = Depends(current_user)):

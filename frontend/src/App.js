@@ -14,6 +14,7 @@ import Financeiro from "@/pages/Financeiro";
 import Documentos from "@/pages/Documentos";
 import Automacoes from "@/pages/Automacoes";
 import Team from "@/pages/Team";
+import Landing from "@/pages/Landing";
 
 function AppRouter() {
   const location = useLocation();
@@ -23,7 +24,7 @@ function AppRouter() {
   }
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/app" replace />} />
+      <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
       <Route path="/app" element={<AppShell />}>
         <Route index element={<Dashboard />} />

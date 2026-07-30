@@ -4,8 +4,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, GripVertical } from "lucide-react";
+import { Plus, GripVertical, Trash2, Mail, Phone, Building2 } from "lucide-react";
 import { toast } from "sonner";
 
 const STAGES = ["Lead", "Contato Feito", "Proposta", "Negociação", "Ganho", "Perdido"];
@@ -20,10 +21,13 @@ const STAGE_HUE = {
 
 const brl = (n) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
+const EMPTY = { name: "", company: "", email: "", phone: "", value: 0, stage: "Lead", notes: "" };
+
 export default function CRM() {
   const [leads, setLeads] = useState([]);
   const [openNew, setOpenNew] = useState(false);
-  const [form, setForm] = useState({ name: "", company: "", email: "", phone: "", value: 0, stage: "Lead" });
+  const [editing, setEditing] = useState(null); // full lead object being edited
+  const [form, setForm] = useState(EMPTY);
 
   const load = async () => { const r = await api.get("/crm/leads"); setLeads(r.data.items); };
   useEffect(() => { load(); }, []);
@@ -32,7 +36,7 @@ export default function CRM() {
     e.preventDefault();
     await api.post("/crm/leads", { ...form, value: Number(form.value) || 0 });
     toast.success("Lead criado");
-    setForm({ name: "", company: "", email: "", phone: "", value: 0, stage: "Lead" });
+    setForm(EMPTY);
     setOpenNew(false);
     load();
   };
@@ -50,6 +54,50 @@ export default function CRM() {
     if (lead && lead.stage !== stage) moveTo(lead, stage);
   };
 
+  const openEdit = (lead) => {
+    setEditing({
+      lead_id: lead.lead_id,
+      name: lead.name || "",
+      company: lead.company || "",
+      email: lead.email || "",
+      phone: lead.phone || "",
+      value: lead.value ?? 0,
+      stage: lead.stage || "Lead",
+      notes: lead.notes || "",
+    });
+  };
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editing) return;
+    const payload = {
+      name: editing.name,
+      company: editing.company,
+      email: editing.email,
+      phone: editing.phone,
+      value: Number(editing.value) || 0,
+      stage: editing.stage,
+      notes: editing.notes,
+    };
+    try {
+      await api.patch(`/crm/leads/${editing.lead_id}`, payload);
+      toast.success("Lead atualizado");
+      setEditing(null);
+      load();
+    } catch { toast.error("Falha ao salvar"); }
+  };
+
+  const removeLead = async () => {
+    if (!editing) return;
+    if (!window.confirm(`Excluir o lead "${editing.name}"?`)) return;
+    try {
+      await api.delete(`/crm/leads/${editing.lead_id}`);
+      toast.success("Lead excluído");
+      setEditing(null);
+      load();
+    } catch { toast.error("Falha ao excluir"); }
+  };
+
   const totalPipeline = leads.reduce((s, l) => s + (l.value || 0), 0);
 
   return (
@@ -58,7 +106,7 @@ export default function CRM() {
         <div>
           <div className="overline text-black/50">CRM · pipeline</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">Vendas em movimento.</h1>
-          <p className="text-black/60 mt-2 text-sm">Arraste os cards entre as colunas para atualizar o estágio.</p>
+          <p className="text-black/60 mt-2 text-sm">Arraste os cards entre as colunas. Clique em um card para editar todos os campos.</p>
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
@@ -76,16 +124,21 @@ export default function CRM() {
               <form onSubmit={createLead} className="space-y-4 pt-2">
                 <div><Label>Nome</Label><Input required data-testid="lead-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
                 <div><Label>Empresa</Label><Input data-testid="lead-company" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value })} /></div>
-                <div><Label>Email</Label><Input type="email" data-testid="lead-email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
-                <div><Label>WhatsApp (E.164)</Label><Input data-testid="lead-phone" placeholder="+5511999999999" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
-                <div><Label>Valor estimado (R$)</Label><Input type="number" data-testid="lead-value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></div>
-                <div>
-                  <Label>Estágio</Label>
-                  <Select value={form.stage} onValueChange={(v) => setForm({ ...form, stage: v })}>
-                    <SelectTrigger data-testid="lead-stage"><SelectValue /></SelectTrigger>
-                    <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Email</Label><Input type="email" data-testid="lead-email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
+                  <div><Label>WhatsApp (E.164)</Label><Input data-testid="lead-phone" placeholder="+5511999999999" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><Label>Valor (R$)</Label><Input type="number" data-testid="lead-value" value={form.value} onChange={(e) => setForm({ ...form, value: e.target.value })} /></div>
+                  <div>
+                    <Label>Estágio</Label>
+                    <Select value={form.stage} onValueChange={(v) => setForm({ ...form, stage: v })}>
+                      <SelectTrigger data-testid="lead-stage"><SelectValue /></SelectTrigger>
+                      <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div><Label>Notas</Label><Textarea rows={3} data-testid="lead-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
                 <DialogFooter><Button type="submit" data-testid="save-lead-btn" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]">Salvar</Button></DialogFooter>
               </form>
             </DialogContent>
@@ -115,25 +168,29 @@ export default function CRM() {
                 </div>
                 <div className="p-2 flex-1 min-h-[200px] space-y-2">
                   {col.map((l) => (
-                    <div
+                    <button
                       key={l.lead_id}
                       draggable
                       onDragStart={(e) => onDragStart(e, l)}
+                      onClick={() => openEdit(l)}
                       data-testid={`lead-card-${l.lead_id}`}
-                      className="group rounded-md border border-black/10 bg-white p-3 cursor-grab active:cursor-grabbing hover:border-black/40 transition-colors"
+                      className="group w-full text-left rounded-md border border-black/10 bg-white p-3 cursor-grab active:cursor-grabbing hover:border-black/40 hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
                           <div className="font-medium text-sm truncate">{l.name}</div>
-                          <div className="text-xs text-black/50 truncate">{l.company}</div>
+                          <div className="text-xs text-black/50 truncate">{l.company || "—"}</div>
                         </div>
                         <GripVertical className="h-3.5 w-3.5 text-black/30 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs font-mono text-black/70">{brl(l.value)}</div>
-                        <div className="text-[10px] uppercase tracking-widest text-black/40">{l.email?.split("@")[0] || "—"}</div>
+                        <div className="flex items-center gap-1">
+                          {l.email && <Mail className="h-3 w-3 text-black/30" />}
+                          {l.phone && <Phone className="h-3 w-3 text-black/30" />}
+                        </div>
                       </div>
-                    </div>
+                    </button>
                   ))}
                   {col.length === 0 && (
                     <div className="text-center text-xs text-black/40 border border-dashed border-black/10 rounded-md py-6">Arraste um card</div>
@@ -144,6 +201,46 @@ export default function CRM() {
           })}
         </div>
       </div>
+
+      {/* Edit dialog */}
+      <Dialog open={!!editing} onOpenChange={(v) => !v && setEditing(null)}>
+        <DialogContent className="sm:max-w-lg" data-testid="edit-lead-dialog">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-black/40" />
+              Editar lead
+            </DialogTitle>
+          </DialogHeader>
+          {editing && (
+            <form onSubmit={saveEdit} className="space-y-4 pt-2">
+              <div><Label>Nome</Label><Input required data-testid="edit-name" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
+              <div><Label>Empresa</Label><Input data-testid="edit-company" value={editing.company} onChange={(e) => setEditing({ ...editing, company: e.target.value })} /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Email</Label><Input type="email" data-testid="edit-email" value={editing.email} onChange={(e) => setEditing({ ...editing, email: e.target.value })} /></div>
+                <div><Label>WhatsApp</Label><Input data-testid="edit-phone" placeholder="+5511999999999" value={editing.phone} onChange={(e) => setEditing({ ...editing, phone: e.target.value })} /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><Label>Valor (R$)</Label><Input type="number" data-testid="edit-value" value={editing.value} onChange={(e) => setEditing({ ...editing, value: e.target.value })} /></div>
+                <div>
+                  <Label>Estágio</Label>
+                  <Select value={editing.stage} onValueChange={(v) => setEditing({ ...editing, stage: v })}>
+                    <SelectTrigger data-testid="edit-stage"><SelectValue /></SelectTrigger>
+                    <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div><Label>Notas</Label><Textarea rows={4} data-testid="edit-notes" value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} placeholder="Contexto do relacionamento, próximos passos, objeções…" /></div>
+              <DialogFooter className="flex items-center gap-2">
+                <Button type="button" variant="outline" onClick={removeLead} data-testid="delete-lead-btn" className="border-red-200 text-red-700 hover:bg-red-50 hover:text-red-800 mr-auto">
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditing(null)} data-testid="cancel-edit-btn">Cancelar</Button>
+                <Button type="submit" data-testid="save-edit-btn" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]">Salvar</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
