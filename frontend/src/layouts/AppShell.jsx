@@ -67,13 +67,15 @@ export default function AppShell() {
         className={`sticky top-0 h-screen shrink-0 border-r border-black/10 bg-white/40 backdrop-blur-sm flex flex-col transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[248px]"}`}
       >
         <div className="h-16 flex items-center gap-3 px-5 border-b border-black/10">
-          <div className="h-8 w-8 rounded-md bg-[hsl(var(--ink))] flex items-center justify-center shrink-0">
-            <span className="font-display font-bold text-[hsl(var(--paper))] leading-none">N</span>
+          <div className="h-8 w-8 rounded-md bg-[hsl(var(--ink))] flex items-center justify-center shrink-0 relative overflow-hidden">
+            <svg width="18" height="18" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" />
+            </svg>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="font-display font-semibold text-sm truncate">Núcleo IA</div>
-              <div className="text-[10px] uppercase tracking-widest text-black/50 truncate">workspace</div>
+              <div className="text-base leading-none truncate italic" style={{ fontFamily: "'Fraunces', serif" }}>Prisma</div>
+              <div className="text-[10px] uppercase tracking-widest text-black/50 truncate mt-1">workspace</div>
             </div>
           )}
         </div>

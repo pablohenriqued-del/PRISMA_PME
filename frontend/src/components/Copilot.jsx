@@ -78,10 +78,12 @@ export default function Copilot({ open, onOpenChange, moduleName }) {
         <div className="flex flex-col h-full">
           <div className="h-16 px-5 flex items-center gap-3 border-b border-black/10">
             <div className="h-8 w-8 rounded-md bg-[hsl(var(--ink))] flex items-center justify-center">
-              <Sparkles className="h-4 w-4 text-[hsl(var(--paper))]" />
+              <svg width="16" height="16" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                <path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" />
+              </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-display font-semibold text-sm">Copiloto Núcleo</div>
+              <div className="italic text-base" style={{ fontFamily: "'Fraunces', serif" }}>Copiloto Prisma</div>
               <div className="text-[11px] text-black/50">Claude Sonnet · contexto: {moduleName}</div>
             </div>
             <button data-testid="close-copilot" onClick={() => onOpenChange(false)} className="h-8 w-8 rounded-md hover:bg-black/5 flex items-center justify-center">
@@ -117,7 +119,9 @@ export default function Copilot({ open, onOpenChange, moduleName }) {
               <div key={i} className={`flex gap-3 ${m.role === "user" ? "justify-end" : ""} fade-up`}>
                 {m.role === "assistant" && (
                   <div className="h-7 w-7 rounded-md bg-[hsl(var(--ink))] flex items-center justify-center shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 text-[hsl(var(--paper))]" />
+                    <svg width="14" height="14" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+                      <path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" />
+                    </svg>
                   </div>
                 )}
                 <div

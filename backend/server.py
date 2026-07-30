@@ -49,7 +49,7 @@ STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 APP_NAME = os.environ.get('APP_NAME', 'nucleo-ia')
 _storage_key: Optional[str] = None
 
-app = FastAPI(title="Núcleo IA API")
+app = FastAPI(title="Prisma API")
 api = APIRouter(prefix="/api")
 
 # ----------------- Helpers -----------------
@@ -344,7 +344,7 @@ async def execute_action(org_id: str, auto: Dict[str, Any], ctx: Dict[str, Any])
         to = target or ctx.get("phone") or ""
         if not to:
             return {"status": "skipped", "reason": "no_phone"}
-        body = template or f"Olá {ctx.get('name','')}! Recebemos seu contato — em breve retornaremos. — Núcleo IA"
+        body = template or f"Olá {ctx.get('name','')}! Recebemos seu contato — em breve retornaremos. — Prisma"
         r = await send_whatsapp(to, body)
         # Also record chat if org exists
         if r.get("status") == "sent":
@@ -371,7 +371,7 @@ async def execute_action(org_id: str, auto: Dict[str, Any], ctx: Dict[str, Any])
         to = target or ctx.get("email") or ""
         if not to:
             return {"status": "skipped", "reason": "no_email"}
-        subject = ctx.get("subject") or "Aviso da Núcleo IA"
+        subject = ctx.get("subject") or "Aviso do Prisma"
         html = template or f"<div style='font-family:Arial,sans-serif;padding:16px'><h2>{subject}</h2><p>Olá {ctx.get('name','')}, este é um aviso automático.</p></div>"
         return await send_email(to, subject, html)
 
@@ -392,7 +392,7 @@ async def execute_action(org_id: str, auto: Dict[str, Any], ctx: Dict[str, Any])
         members = await db.users.find({"org_id": org_id}, {"_id": 0}).to_list(50)
         sent = 0
         for m in members:
-            r = await send_email(m["email"], "Alerta da equipe — Núcleo IA",
+            r = await send_email(m["email"], "Alerta da equipe — Prisma",
                                  f"<div style='font-family:Arial,sans-serif'><h3>Alerta automático</h3><p>{ctx.get('summary','Uma automação foi disparada.')}</p></div>")
             if r.get("status") == "sent":
                 sent += 1
@@ -785,13 +785,13 @@ async def team_invite(body: InviteIn, user: dict = Depends(current_user)):
     html = f"""
     <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px">
       <h2 style="margin:0 0 8px 0">Você foi convidado para {org_name}</h2>
-      <p>{user['name']} convidou você para colaborar na Núcleo IA como <b>{body.role}</b>.</p>
+      <p>{user['name']} convidou você para colaborar no Prisma como <b>{body.role}</b>.</p>
       <p>Acesse a plataforma e faça login com este e-mail para entrar:</p>
-      <p><a href="https://pme-all-in-one.preview.emergentagent.com/login" style="display:inline-block;background:#0F172A;color:#fff;text-decoration:none;padding:12px 20px;border-radius:6px">Entrar na Núcleo IA</a></p>
+      <p><a href="https://pme-all-in-one.preview.emergentagent.com/login" style="display:inline-block;background:#0A0A14;color:#F5F1EA;text-decoration:none;padding:12px 20px;border-radius:6px">Entrar no Prisma</a></p>
       <p style="color:#64748b;font-size:12px">Se você não esperava este convite, ignore este e-mail.</p>
     </div>
     """
-    await send_email(body.email, f"Convite para {org_name} • Núcleo IA", html)
+    await send_email(body.email, f"Convite para {org_name} • Prisma", html)
     inv.pop("_id", None)
     return {"ok": True, "invite": inv}
 
@@ -852,7 +852,7 @@ class CopilotIn(BaseModel):
     session_id: Optional[str] = None
     context: Optional[str] = None
 
-SYSTEM_PROMPT = """Você é o Copiloto Núcleo IA, assistente da plataforma modular para PMEs brasileiras.
+SYSTEM_PROMPT = """Você é o Copiloto Prisma, assistente da plataforma modular para PMEs brasileiras.
 Você entende de CRM, WhatsApp, Projetos, Financeiro, Documentos, Automações e Dashboards.
 Responda em português (Brasil), de forma clara, objetiva, prática e amigável.
 Sempre que possível ofereça próximos passos acionáveis. Use bullets curtos quando útil."""
@@ -904,7 +904,7 @@ async def startup():
 
 @api.get("/")
 async def root():
-    return {"ok": True, "service": "Núcleo IA", "twilio": bool(twilio_client), "email": bool(EMAIL_KEY)}
+    return {"ok": True, "service": "Prisma", "twilio": bool(twilio_client), "email": bool(EMAIL_KEY)}
 
 app.include_router(api)
 
