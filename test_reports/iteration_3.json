@@ -1,0 +1,18 @@
+{
+  "summary": "Verified bug fix for landing page videos (pt-BR narration + Marina case video). All 10 acceptance criteria PASS. Demo video (/prisma-demo.webm) loads with readyState=4, duration=55.047s, autoplays muted, unmutes on 'Reproduzir com som' click (muted:false, currentTime advances 1.45s→1.82s, webkitAudioDecodedByteCount=52136 confirming Opus audio track). Case video (/case-prisma.webm) loads with duration=30.007s (within 29-31s range), unmutes on click (muted:false, currentTime advances 0→5.34s, webkitAudioDecodedByteCount=84411). Case video visually shows real app UI (Prisma dashboard with KPI cards, CRM/WhatsApp sidebar, revenue chart, pipeline bar chart) — NOT the previous Fraunces italic quote page. Identity badge 'MS · Marina Salles · STUDIO FRAME' visible in top-left overlay. Hero demo link, sound toggles for both videos found via data-testid. Zero 404s on webm assets. Zero page errors. Only console noise was two 401s from unrelated auth endpoints (not required for public landing).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A", "frontend": "100%"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Landing page videos bug fix is verified. Demo=55s, Case=30s, both have Opus pt-BR audio, unmute overlays work, Marina case video shows real UI + MS/Studio Frame badge. Unrelated 401 console errors from auth endpoints exist but don't affect public landing."
+}

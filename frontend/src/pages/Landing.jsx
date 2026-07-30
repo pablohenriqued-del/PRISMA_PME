@@ -140,6 +140,14 @@ function CaseVideo() {
     if (ref.current.paused) ref.current.play().catch(() => {});
   };
 
+  const bigPlay = () => {
+    if (!ref.current) return;
+    ref.current.muted = false;
+    setMuted(false);
+    ref.current.currentTime = 0;
+    ref.current.play().catch(() => {});
+  };
+
   return (
     <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-stretch" data-testid="case-video-wrap">
       {/* Video card */}
@@ -163,6 +171,14 @@ function CaseVideo() {
             poster="/case-prisma-poster.jpg"
             autoPlay muted loop playsInline preload="metadata"
           />
+          {/* Marina identity badge on top-left */}
+          <div className="absolute top-4 left-4 flex items-center gap-2.5 bg-black/60 backdrop-blur border border-white/10 rounded-full pl-1.5 pr-4 py-1.5 z-10">
+            <div className="h-7 w-7 rounded-full flex items-center justify-center text-[11px] font-medium" style={{ background: "hsl(32 95% 55% / 0.55)", fontFamily: "'Fraunces', serif" }}>MS</div>
+            <div className="text-white text-xs">
+              <div className="leading-none">Marina Salles</div>
+              <div className="text-white/60 text-[10px] mt-1 uppercase tracking-widest">Studio Frame</div>
+            </div>
+          </div>
           {/* progress bar */}
           <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-10">
             <div className="h-full transition-[width] duration-100 ease-linear" style={{
@@ -170,6 +186,19 @@ function CaseVideo() {
               background: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
             }} />
           </div>
+          {/* Overlay CTA when muted */}
+          {muted && (
+            <button
+              onClick={bigPlay}
+              data-testid="case-unmute"
+              className="absolute inset-0 flex items-center justify-center bg-black/25 hover:bg-black/40 transition-colors z-20"
+            >
+              <div className="flex items-center gap-3 px-5 py-3 rounded-full bg-white/95 text-[#0A0A14] text-sm font-medium shadow-lg">
+                <Play className="h-4 w-4" fill="currentColor" />
+                Reproduzir com áudio (pt-BR)
+              </div>
+            </button>
+          )}
           {/* sound toggle */}
           <button
             onClick={toggleSound}
@@ -514,8 +543,10 @@ export default function Landing() {
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
               <a href="#demo" data-testid="hero-demo-link" className="text-sm text-black/75 hover:text-black underline underline-offset-4 decoration-black/30 flex items-center gap-2">
+            <div className="absolute top-6 right-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-black/50">
                 <Play className="h-3.5 w-3.5" fill="currentColor" />
-                Assistir demo · 60s
+                Assistir demo com áudio · 60s
+              </div>
               </a>
               <div className="flex items-center gap-2 text-xs text-black/50">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
