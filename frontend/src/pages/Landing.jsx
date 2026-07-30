@@ -117,6 +117,98 @@ function CopilotoPreview() {
   );
 }
 
+function CaseVideo() {
+  const ref = useRef(null);
+  const [muted, setMuted] = useState(true);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(30);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const onTime = () => setTime(v.currentTime);
+    const onMeta = () => setDuration(v.duration || 30);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadedmetadata", onMeta);
+    return () => { v.removeEventListener("timeupdate", onTime); v.removeEventListener("loadedmetadata", onMeta); };
+  }, []);
+
+  const toggleSound = () => {
+    if (!ref.current) return;
+    ref.current.muted = !ref.current.muted;
+    setMuted(ref.current.muted);
+    if (ref.current.paused) ref.current.play().catch(() => {});
+  };
+
+  return (
+    <div className="relative grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-8 items-stretch" data-testid="case-video-wrap">
+      {/* Video card */}
+      <div className="rounded-xl border border-black/10 shadow-[0_40px_100px_-25px_rgba(10,10,20,0.35)] overflow-hidden bg-black">
+        <div className="h-9 bg-black/[0.06] border-b border-white/5 flex items-center gap-1.5 px-4">
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="ml-4 text-[11px] font-mono text-white/40">prisma.app · case · marina salles · 30s</div>
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-white/50">
+            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            ao vivo
+          </div>
+        </div>
+        <div className="relative aspect-[16/9] bg-[#0A0A14]">
+          <video
+            ref={ref}
+            data-testid="case-video"
+            className="absolute inset-0 w-full h-full object-cover"
+            src="/case-prisma.webm"
+            poster="/case-prisma-poster.jpg"
+            autoPlay muted loop playsInline preload="metadata"
+          />
+          {/* progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-10">
+            <div className="h-full transition-[width] duration-100 ease-linear" style={{
+              width: `${Math.min(100, (time / (duration || 30)) * 100)}%`,
+              background: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
+            }} />
+          </div>
+          {/* sound toggle */}
+          <button
+            onClick={toggleSound}
+            data-testid="case-sound-toggle"
+            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 flex items-center justify-center transition-colors z-20"
+            aria-label={muted ? "Ativar som" : "Desativar som"}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Side: founder card */}
+      <div className="flex flex-col justify-between rounded-xl border border-black/10 bg-white p-6">
+        <div>
+          <div className="h-14 w-14 rounded-full flex items-center justify-center text-lg mb-4" style={{ background: "hsl(32 95% 55% / 0.3)", fontFamily: "'Fraunces', serif" }}>MS</div>
+          <div className="font-medium text-base">Marina Salles</div>
+          <div className="text-xs text-black/55 mt-0.5">Sócia · Studio Frame</div>
+          <div className="text-xs text-black/40 mt-0.5">Design · São Paulo</div>
+        </div>
+        <div className="mt-6 pt-5 border-t border-black/10 space-y-2">
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-black/45">Setor</div>
+            <div className="text-sm">Agência de design</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-black/45">Cliente há</div>
+            <div className="text-sm font-mono">4 meses</div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-widest text-black/45">Time</div>
+            <div className="text-sm font-mono">6 pessoas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DemoVideo() {
   const ref = useRef(null);
   const [muted, setMuted] = useState(true);
@@ -605,6 +697,17 @@ export default function Landing() {
             <span>3 estados</span>
             <span className="text-black/20">·</span>
             <span>7 setores</span>
+          </div>
+
+          {/* CASE em VÍDEO */}
+          <div className="mt-20 pt-14 border-t border-black/10" data-testid="case-video-block">
+            <div className="max-w-3xl mb-8">
+              <div className="overline text-black/50 mb-3">um case em vídeo · 30s</div>
+              <h3 className="tracking-[-0.02em] leading-[1.05]" style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(30px, 3.4vw, 44px)" }}>
+                Marina conta a mudança <em className="italic">na própria voz.</em>
+              </h3>
+            </div>
+            <CaseVideo />
           </div>
         </div>
       </section>
