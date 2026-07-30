@@ -3,10 +3,70 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   ArrowUpRight, Check, Sparkles, MessageCircle, Users2, Wallet, Kanban,
-  FileText, Zap, LayoutDashboard, UserCog,
+  FileText, Zap, UserCog,
 } from "lucide-react";
 
 const SPECTRUM = ["#7C5CFF", "#E940A0", "#FF6A55", "#F5A623", "#A8D62F"];
+
+const SHOTS = [
+  { src: "/screenshots/dashboard.jpg", label: "Dashboard", desc: "Uma visão geral do dia com KPIs vivos, gráficos de receita e pipeline." },
+  { src: "/screenshots/crm.jpg", label: "CRM", desc: "Kanban de leads com drag-and-drop e editor completo em um clique." },
+  { src: "/screenshots/whatsapp.jpg", label: "WhatsApp", desc: "Inbox conectada ao Twilio conversando pelo número da sua empresa." },
+  { src: "/screenshots/automacoes.jpg", label: "Automações", desc: "Trigger → ação, log de execuções e botão Testar em cada regra." },
+];
+
+function ScreenshotRotator() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setI((n) => (n + 1) % SHOTS.length), 4200);
+    return () => clearInterval(t);
+  }, []);
+  const shot = SHOTS[i];
+  return (
+    <div className="relative">
+      {/* Browser chrome */}
+      <div className="rounded-xl border border-black/10 bg-white shadow-[0_40px_80px_-20px_rgba(10,10,20,0.35)] overflow-hidden">
+        <div className="h-9 bg-black/[0.03] border-b border-black/10 flex items-center gap-1.5 px-4">
+          <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
+          <div className="ml-4 text-[11px] font-mono text-black/40">prisma.app · {shot.label.toLowerCase()}</div>
+        </div>
+        <div className="relative aspect-[1600/900] bg-[#F5F1EA]">
+          {SHOTS.map((s, idx) => (
+            <img
+              key={s.src}
+              src={s.src}
+              alt={`Prisma · ${s.label}`}
+              data-testid={`shot-${s.label.toLowerCase()}`}
+              loading={idx === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 w-full h-full object-cover object-top transition-opacity duration-700 ${idx === i ? "opacity-100" : "opacity-0"}`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Rotator caption + dots */}
+      <div className="mt-6 flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-4 max-w-xl">
+          <div className="overline text-black/50 w-24 shrink-0" data-testid="shot-label">{shot.label}</div>
+          <div className="text-sm text-black/60">{shot.desc}</div>
+        </div>
+        <div className="flex items-center gap-2">
+          {SHOTS.map((s, idx) => (
+            <button
+              key={s.src}
+              onClick={() => setI(idx)}
+              data-testid={`shot-dot-${idx}`}
+              aria-label={`Ver ${s.label}`}
+              className={`h-1.5 rounded-full transition-all ${idx === i ? "w-8 bg-[#0A0A14]" : "w-4 bg-black/20 hover:bg-black/40"}`}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function PrismLogo({ size = 22, dark = false }) {
   return (
@@ -29,21 +89,21 @@ const MODULES = [
 
 const PLANS = [
   {
-    name: "Starter", price: "R$ 89", per: "/mês",
+    name: "Starter", price: "R$ 900", per: "/mês",
     tag: "Solopreneur",
     features: ["1 usuário", "CRM + WhatsApp mock", "Copiloto 200 msgs/mês", "Documentos 1GB"],
     cta: "Começar grátis por 14 dias",
     highlight: false,
   },
   {
-    name: "Growth", price: "R$ 249", per: "/mês",
+    name: "Growth", price: "R$ 2.500", per: "/mês",
     tag: "Recomendado",
     features: ["Até 5 usuários", "WhatsApp real (Twilio)", "Copiloto ilimitado", "Automações ilimitadas", "Documentos 20GB"],
     cta: "Assinar Growth",
     highlight: true,
   },
   {
-    name: "Business", price: "R$ 599", per: "/mês",
+    name: "Business", price: "R$ 6.000", per: "/mês",
     tag: "Times crescendo",
     features: ["Usuários ilimitados", "SLA de suporte", "Onboarding assistido", "API pública", "Documentos 200GB"],
     cta: "Falar com vendas",
@@ -149,61 +209,9 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Product mock */}
+          {/* Product mock — rotating real screenshots */}
           <div className="mt-16 lg:mt-24 relative">
-            <div className="rounded-xl border border-black/10 bg-white shadow-[0_40px_80px_-20px_rgba(10,10,20,0.35)] overflow-hidden">
-              <div className="h-9 bg-black/[0.03] border-b border-black/10 flex items-center gap-1.5 px-4">
-                <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
-                <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
-                <div className="h-2.5 w-2.5 rounded-full bg-black/15" />
-                <div className="ml-4 text-[11px] font-mono text-black/40">prisma.app · dashboard</div>
-              </div>
-              <div className="grid grid-cols-[200px_1fr] min-h-[420px]">
-                <div className="border-r border-black/10 p-3 space-y-1 bg-black/[0.02]">
-                  {[LayoutDashboard, Users2, MessageCircle, Kanban, Wallet, FileText, Zap, UserCog].map((I, i) => (
-                    <div key={i} className={`flex items-center gap-2.5 h-8 px-2.5 rounded text-xs ${i === 0 ? "bg-[#0A0A14] text-[#F5F1EA]" : "text-black/60"}`}>
-                      <I className="h-3.5 w-3.5" strokeWidth={1.6} />
-                      <span>{["Dashboard","CRM","WhatsApp","Projetos","Financeiro","Documentos","Automações","Equipe"][i]}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="p-6">
-                  <div className="overline text-black/50">visão geral</div>
-                  <div className="mt-2 mb-5" style={{ fontFamily: "'Fraunces', serif", fontSize: 36 }}>Olá — <em>seu negócio hoje.</em></div>
-                  <div className="grid grid-cols-4 gap-3">
-                    {[
-                      ["Leads", "8", "#F5A623"],
-                      ["Conversas WA", "4", "#A8D62F"],
-                      ["Tarefas", "6", "#FF6A55"],
-                      ["Automações", "2", "#7C5CFF"],
-                    ].map(([l, v, c]) => (
-                      <div key={l} className="rounded-md border border-black/10 bg-white p-4 relative overflow-hidden">
-                        <div className="absolute top-0 left-0 h-[3px] w-full" style={{ background: c }} />
-                        <div className="text-[10px] uppercase tracking-widest text-black/50">{l}</div>
-                        <div className="mt-2 text-3xl font-light" style={{ fontFamily: "'Fraunces', serif" }}>{v}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-4 grid grid-cols-3 gap-3">
-                    <div className="col-span-2 h-32 rounded-md border border-black/10 bg-white p-4 flex flex-col">
-                      <div className="text-[10px] uppercase tracking-widest text-black/50">Receita por dia</div>
-                      <svg viewBox="0 0 300 80" className="flex-1 mt-2" preserveAspectRatio="none">
-                        <polyline fill="none" stroke="#0A0A14" strokeWidth="2" points="0,60 40,55 80,58 120,52 160,45 200,38 240,30 280,18" />
-                        <circle cx="280" cy="18" r="3" fill="#F5A623" />
-                      </svg>
-                    </div>
-                    <div className="h-32 rounded-md border border-black/10 bg-white p-4">
-                      <div className="text-[10px] uppercase tracking-widest text-black/50">Pipeline</div>
-                      <div className="flex items-end gap-1.5 h-16 mt-3">
-                        {[70, 45, 30, 55, 20].map((h, i) => (
-                          <div key={i} style={{ height: `${h}%`, background: "#0A0A14" }} className="flex-1 rounded-t" />
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ScreenshotRotator />
             {/* Chromatic underline shadow */}
             <div className="absolute -bottom-2 left-8 right-8 h-1 rounded-full opacity-60 flex overflow-hidden">
               {SPECTRUM.map((c) => <div key={c} style={{ background: c, flex: 1 }} />)}
@@ -276,7 +284,7 @@ export default function Landing() {
             <div className="max-w-2xl text-white/80 leading-relaxed space-y-4 text-[15px]">
               <p>
                 Passei 12 anos vendendo software para pequenas e médias empresas brasileiras. Ouvi 
-                a mesma reclamação por anos: "eu abro esse sistema, vejo relatório bonito, mas ninguém faz nada com ele".
+                a mesma reclamação por anos: &ldquo;eu abro esse sistema, vejo relatório bonito, mas ninguém faz nada com ele&rdquo;.
               </p>
               <p>
                 Prisma nasceu pra virar essa lógica de cabeça pra baixo. Cada tela existe para <b>reduzir uma tarefa</b>,
