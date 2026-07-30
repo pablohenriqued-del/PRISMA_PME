@@ -543,10 +543,8 @@ export default function Landing() {
                 <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
               </button>
               <a href="#demo" data-testid="hero-demo-link" className="text-sm text-black/75 hover:text-black underline underline-offset-4 decoration-black/30 flex items-center gap-2">
-            <div className="absolute top-6 right-6 flex items-center gap-2 text-[10px] uppercase tracking-[0.25em] text-black/50">
                 <Play className="h-3.5 w-3.5" fill="currentColor" />
                 Assistir demo com áudio · 60s
-              </div>
               </a>
               <div className="flex items-center gap-2 text-xs text-black/50">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
