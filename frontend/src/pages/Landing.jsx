@@ -366,7 +366,8 @@ export default function Landing() {
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm text-black/70 ml-6">
             <a href="#modulos" className="hover:text-black transition-colors">Módulos</a>
-            <a href="#manifesto" className="hover:text-black transition-colors">Manifesto</a>
+            <a href="#demo" className="hover:text-black transition-colors">Demo</a>
+            <a href="#depoimentos" className="hover:text-black transition-colors">Depoimentos</a>
             <a href="#precos" className="hover:text-black transition-colors">Preços</a>
           </div>
           <div className="ml-auto flex items-center gap-3">
@@ -397,60 +398,37 @@ export default function Landing() {
             background: "radial-gradient(closest-side, rgba(255,106,85,0.15), transparent 70%)",
           }} aria-hidden="true" />
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center relative z-10">
-            {/* Left: headline + trust strip */}
-            <div className="lg:col-span-7">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="flex items-center gap-1">
-                  {SPECTRUM.map((c) => <div key={c} className="h-1.5 w-1.5 rounded-full" style={{ background: c, opacity: 0.9 }} />)}
-                </div>
-                <div className="text-[11px] uppercase tracking-[0.24em] text-black/55">Sistema operacional · plataforma para PMEs</div>
+          <div className="relative z-10 max-w-4xl">
+            <div className="overline text-black/50 mb-6">plataforma para pmes · beta</div>
+            <h1 className="font-light tracking-[-0.03em] leading-[0.95]"
+                style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(56px, 9vw, 132px)" }}>
+              Uma luz.<br />
+              <span className="italic" style={{
+                backgroundImage: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
+                WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+              }}>Muitas ações.</span>
+            </h1>
+            <p className="mt-8 text-lg text-black/70 leading-relaxed max-w-2xl">
+              CRM, WhatsApp, financeiro, projetos, documentos e automações — refratados em uma única superfície onde uma IA orquestra o dia-a-dia da sua PME.
+            </p>
+
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <button onClick={primaryCta} data-testid="hero-cta"
+                className="group relative overflow-hidden rounded-md bg-[#0A0A14] text-[#F5F1EA] h-14 px-8 text-base flex items-center gap-3 hover:bg-black transition-colors">
+                <span className="absolute left-0 right-0 bottom-0 h-[3px] flex opacity-80 group-hover:opacity-100">
+                  {SPECTRUM.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
+                </span>
+                Começar agora
+                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </button>
+              <a href="#demo" data-testid="hero-demo-link" className="text-sm text-black/75 hover:text-black underline underline-offset-4 decoration-black/30 flex items-center gap-2">
+                <Play className="h-3.5 w-3.5" fill="currentColor" />
+                Assistir demo · 60s
+              </a>
+              <div className="flex items-center gap-2 text-xs text-black/50">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Sem cartão · 14 dias grátis
               </div>
-
-              <h1 className="font-light tracking-[-0.025em] leading-[1.02]"
-                  style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(50px, 6.8vw, 104px)" }}>
-                A operação inteira,<br />
-                <em className="italic font-normal">em uma superfície.</em>
-              </h1>
-
-              <p className="mt-8 text-lg text-black/65 leading-[1.6] max-w-xl">
-                CRM, WhatsApp, financeiro, projetos e automações reunidos em uma única interface — orquestrados por um copiloto de IA que conhece cada canto do seu negócio.
-              </p>
-
-              <div className="mt-10 flex flex-wrap items-center gap-5">
-                <button onClick={primaryCta} data-testid="hero-cta"
-                  className="group relative overflow-hidden rounded-md bg-[#0A0A14] text-[#F5F1EA] h-14 px-8 text-base flex items-center gap-3 hover:bg-black transition-colors">
-                  <span className="absolute left-0 right-0 bottom-0 h-[3px] flex opacity-70 group-hover:opacity-100 transition-opacity">
-                    {SPECTRUM.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
-                  </span>
-                  Começar agora
-                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </button>
-                <a href="#demo" data-testid="hero-demo-link" className="text-sm text-black/75 hover:text-black underline underline-offset-4 decoration-black/30 flex items-center gap-2">
-                  <Play className="h-3.5 w-3.5" fill="currentColor" />
-                  Assistir demo · 60s
-                </a>
-              </div>
-
-              {/* Trust strip */}
-              <div className="mt-14 pt-8 border-t border-black/10 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-xl">
-                {[
-                  ["8", "módulos nativos"],
-                  ["Claude 4.5", "copiloto de IA"],
-                  ["Twilio", "WhatsApp real"],
-                  ["14 dias", "grátis · sem cartão"],
-                ].map(([n, l]) => (
-                  <div key={l} className="min-w-0">
-                    <div className="text-[26px] leading-none tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>{n}</div>
-                    <div className="text-[11px] text-black/50 mt-2 uppercase tracking-widest">{l}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right: live Copiloto preview card */}
-            <div className="lg:col-span-5">
-              <CopilotoPreview />
             </div>
           </div>
 
@@ -560,6 +538,73 @@ export default function Landing() {
                 — Fundador, Prisma
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIALS — social proof */}
+      <section id="depoimentos" className="py-24 border-t border-black/10">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10">
+          <div className="max-w-3xl mb-14">
+            <div className="overline text-black/50 mb-4">quem já usa</div>
+            <h2 className="tracking-[-0.02em] leading-[1.05]" style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(38px, 4.5vw, 60px)" }}>
+              Times que trocaram <em className="italic">6 abas por uma.</em>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                quote: "Antes eu vivia entre planilha, WhatsApp Web e três CRMs de teste. Em duas semanas de Prisma, meu time comercial voltou a fechar contrato antes do almoço.",
+                name: "Marina Salles",
+                role: "Sócia",
+                company: "Studio Frame · design",
+                initials: "MS",
+                accent: "hsl(32 95% 55% / 0.30)",
+              },
+              {
+                quote: "O copiloto virou meu gerente de operações. Todo dia às 8h ele me manda o que atrasou, quem tem que ser cobrado e qual proposta ainda não foi respondida.",
+                name: "Ricardo Alencar",
+                role: "Fundador",
+                company: "Contabilidade Ponte",
+                initials: "RA",
+                accent: "hsl(245 60% 55% / 0.28)",
+              },
+              {
+                quote: "A automação que manda mensagem no WhatsApp quando entra um lead novo pagou o plano no primeiro mês. Nunca mais perdi cliente por demorar pra responder.",
+                name: "Juliana Prado",
+                role: "Diretora comercial",
+                company: "Clínica Vitalis",
+                initials: "JP",
+                accent: "hsl(148 60% 45% / 0.30)",
+              },
+            ].map((t, i) => (
+              <div key={t.name} data-testid={`testimonial-${i}`} className="rounded-md border border-black/10 bg-white p-7 flex flex-col relative overflow-hidden">
+                <div className="absolute top-0 left-0 h-[3px] w-full" style={{ background: t.accent }} />
+                <div className="text-3xl leading-none text-black/20" style={{ fontFamily: "'Fraunces', serif" }}>&ldquo;</div>
+                <p className="mt-3 text-[15px] leading-relaxed text-black/80 flex-1" style={{ fontFamily: "'Fraunces', serif" }}>
+                  {t.quote}
+                </p>
+                <div className="mt-6 pt-5 border-t border-black/10 flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full flex items-center justify-center text-xs font-medium" style={{ background: t.accent }}>
+                    {t.initials}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium truncate">{t.name}</div>
+                    <div className="text-xs text-black/55 truncate">{t.role} · {t.company}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Small trust ribbon */}
+          <div className="mt-12 flex items-center justify-center gap-8 flex-wrap text-xs text-black/50 uppercase tracking-widest">
+            <span>+ 40 pmes beta</span>
+            <span className="text-black/20">·</span>
+            <span>3 estados</span>
+            <span className="text-black/20">·</span>
+            <span>7 setores</span>
           </div>
         </div>
       </section>
