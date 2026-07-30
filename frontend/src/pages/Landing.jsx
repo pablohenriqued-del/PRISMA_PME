@@ -15,10 +15,125 @@ const SHOTS = [
   { src: "/screenshots/automacoes.jpg", label: "Automações", desc: "Trigger → ação, log de execuções e botão Testar em cada regra." },
 ];
 
+const CAPTIONS = [
+  { t: [0, 4],   step: 1, text: "Dashboard vivo — KPIs, receita e pipeline do dia" },
+  { t: [4, 6],   step: 2, text: "Trocando para o CRM" },
+  { t: [6, 15],  step: 2, text: "Editor completo · qualquer campo do lead em um clique" },
+  { t: [15, 17], step: 3, text: "Abrindo o WhatsApp" },
+  { t: [17, 25], step: 3, text: "Inbox real conectada ao Twilio · número da empresa" },
+  { t: [25, 28], step: 4, text: "Automações — regras que rodam por você" },
+  { t: [28, 36], step: 4, text: "Testando uma regra em tempo real" },
+  { t: [36, 42], step: 4, text: "Log de execuções · auditoria completa" },
+  { t: [42, 46], step: 5, text: "Voltando ao panorama" },
+  { t: [46, 62], step: 6, text: "Copiloto Claude 4.5 respondendo em streaming" },
+];
+
+const STEPS = ["Dashboard", "CRM", "WhatsApp", "Automações", "Panorama", "Copiloto"];
+
+function CopilotoPreview() {
+  const question = "Como está meu pipeline hoje?";
+  const answer = "Você tem 3 leads em Negociação totalizando R$ 62.900. O maior é Studio D — última interação foi há 4 dias.\n\nSugiro fazer um follow-up hoje pelo WhatsApp e mover Diego Alves para Proposta.";
+  const [typed, setTyped] = useState("");
+  const [phase, setPhase] = useState("typing"); // typing | done
+
+  useEffect(() => {
+    let iv, restart, initial;
+    const start = () => {
+      setPhase("typing");
+      setTyped("");
+      let i = 0;
+      iv = setInterval(() => {
+        if (i < answer.length) {
+          setTyped(answer.slice(0, i + 1));
+          i += 1;
+        } else {
+          clearInterval(iv);
+          setPhase("done");
+          restart = setTimeout(start, 6500);
+        }
+      }, 22);
+    };
+    initial = setTimeout(start, 900);
+    return () => { clearTimeout(initial); clearTimeout(restart); clearInterval(iv); };
+  }, []);
+
+  return (
+    <div className="relative" data-testid="copiloto-preview">
+      {/* soft ambient glow behind card */}
+      <div className="absolute -inset-3 -z-10 rounded-2xl blur-2xl opacity-60" style={{
+        background: "radial-gradient(closest-side, rgba(124,92,255,0.18), transparent 60%), radial-gradient(closest-side at 100% 100%, rgba(245,166,35,0.15), transparent 60%)",
+      }} />
+      <div className="rounded-xl border border-black/10 bg-white shadow-[0_30px_80px_-20px_rgba(10,10,20,0.22)] overflow-hidden">
+        {/* Header */}
+        <div className="px-5 py-4 border-b border-black/10 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-md bg-[#0A0A14] flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" /></svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="italic leading-none" style={{ fontFamily: "'Fraunces', serif", fontSize: 16 }}>Copiloto Prisma</div>
+            <div className="text-[11px] text-black/50 mt-1.5">Claude 4.5 · sempre à mão</div>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+            <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] uppercase tracking-widest text-emerald-800 font-medium">ativo</span>
+          </div>
+        </div>
+
+        {/* Conversation */}
+        <div className="p-5 space-y-4 min-h-[280px]">
+          <div className="flex justify-end">
+            <div className="bg-[#0A0A14] text-[#F5F1EA] rounded-md rounded-tr-none px-4 py-2.5 text-sm max-w-[85%]">
+              {question}
+            </div>
+          </div>
+          <div className="flex gap-2.5">
+            <div className="h-7 w-7 rounded-md bg-[#0A0A14] flex items-center justify-center shrink-0">
+              <svg width="12" height="12" viewBox="0 0 44 44" fill="none"><path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" /></svg>
+            </div>
+            <div className="text-sm text-black/85 leading-relaxed whitespace-pre-wrap min-h-[96px] flex-1">
+              {typed}
+              {phase === "typing" && <span className="inline-block w-[3px] h-4 bg-black/60 ml-0.5 align-middle animate-pulse" />}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer stats */}
+        <div className="px-5 py-3 border-t border-black/10 grid grid-cols-3 gap-2 bg-black/[0.02]">
+          <div>
+            <div className="text-[9px] uppercase tracking-widest text-black/50">Latência</div>
+            <div className="text-xs font-mono mt-0.5">~ 340ms</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-widest text-black/50">Contexto</div>
+            <div className="text-xs font-mono mt-0.5">CRM · WA</div>
+          </div>
+          <div>
+            <div className="text-[9px] uppercase tracking-widest text-black/50">Modo</div>
+            <div className="text-xs font-mono mt-0.5">streaming</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function DemoVideo() {
   const ref = useRef(null);
   const [muted, setMuted] = useState(true);
-  const [playing, setPlaying] = useState(false);
+  const [time, setTime] = useState(0);
+  const [duration, setDuration] = useState(60);
+
+  useEffect(() => {
+    const v = ref.current;
+    if (!v) return;
+    const onTime = () => setTime(v.currentTime);
+    const onMeta = () => setDuration(v.duration || 60);
+    v.addEventListener("timeupdate", onTime);
+    v.addEventListener("loadedmetadata", onMeta);
+    return () => { v.removeEventListener("timeupdate", onTime); v.removeEventListener("loadedmetadata", onMeta); };
+  }, []);
+
+  const current = CAPTIONS.find((c) => time >= c.t[0] && time < c.t[1]) || CAPTIONS[0];
 
   const toggleSound = () => {
     if (!ref.current) return;
@@ -42,12 +157,13 @@ function DemoVideo() {
           <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
           <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
-          <div className="ml-4 text-[11px] font-mono text-white/40">prisma.app · walkthrough · 60s</div>
+          <div className="ml-4 text-[11px] font-mono text-white/40">prisma.app · walkthrough · {Math.round(duration)}s</div>
           <div className="ml-auto flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-white/50">
             <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
             ao vivo
           </div>
         </div>
+
         <div className="relative aspect-[16/9] bg-black">
           <video
             ref={ref}
@@ -55,20 +171,32 @@ function DemoVideo() {
             className="absolute inset-0 w-full h-full object-cover"
             src="/prisma-demo.webm"
             poster="/screenshots/dashboard.jpg"
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
+            autoPlay muted loop playsInline preload="metadata"
           />
+
+          {/* Caption badge (bottom-left) */}
+          <div className="absolute bottom-14 left-4 right-4 flex justify-start pointer-events-none z-10" data-testid="demo-caption-wrap">
+            <div key={current.text} className="fade-up inline-flex items-center gap-3 bg-black/75 backdrop-blur-md text-white text-sm px-4 py-2.5 rounded-md max-w-[80%] border border-white/10">
+              <div className="text-[10px] font-mono text-white/50 shrink-0">{String(current.step).padStart(2, "0")}</div>
+              <div className="w-px h-4 bg-white/15" />
+              <div data-testid="demo-caption">{current.text}</div>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-10">
+            <div className="h-full transition-[width] duration-100 ease-linear" style={{
+              width: `${Math.min(100, (time / (duration || 60)) * 100)}%`,
+              background: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
+            }} />
+          </div>
+
           {/* Overlay CTA when muted */}
           {muted && (
             <button
               onClick={bigPlay}
               data-testid="demo-unmute"
-              className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/25 transition-colors"
+              className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/25 transition-colors z-20"
             >
               <div className="flex items-center gap-3 px-5 py-3 rounded-full bg-white/95 text-[#0A0A14] text-sm font-medium shadow-lg">
                 <Play className="h-4 w-4" fill="currentColor" />
@@ -76,18 +204,31 @@ function DemoVideo() {
               </div>
             </button>
           )}
+
           {/* Sound toggle */}
           <button
             onClick={toggleSound}
             data-testid="demo-sound-toggle"
-            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 flex items-center justify-center transition-colors"
+            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 flex items-center justify-center transition-colors z-20"
             aria-label={muted ? "Ativar som" : "Desativar som"}
           >
             {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
           </button>
         </div>
+
+        {/* Step ticker under video */}
+        <div className="bg-black text-white px-4 py-3 flex items-center justify-center gap-5 flex-wrap border-t border-white/5">
+          {STEPS.map((label, i) => {
+            const active = current.step === i + 1;
+            return (
+              <div key={label} data-testid={`demo-step-${i + 1}`} className={`flex items-center gap-2 text-[11px] transition-opacity ${active ? "opacity-100" : "opacity-30"}`}>
+                <div className={`h-1.5 w-1.5 rounded-full ${active ? "bg-white" : "bg-white/40"}`} style={active ? { boxShadow: `0 0 12px ${SPECTRUM[i % SPECTRUM.length]}` } : undefined} />
+                <span className="uppercase tracking-widest">{label}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      {/* Chromatic underline */}
       <div className="absolute -bottom-2 left-8 right-8 h-1 rounded-full opacity-60 flex overflow-hidden">
         {SPECTRUM.map((c) => <div key={c} style={{ background: c, flex: 1 }} />)}
       </div>
@@ -256,36 +397,60 @@ export default function Landing() {
             background: "radial-gradient(closest-side, rgba(255,106,85,0.15), transparent 70%)",
           }} aria-hidden="true" />
 
-          <div className="relative z-10 max-w-4xl">
-            <div className="overline text-black/50 mb-6">plataforma para pmes · beta</div>
-            <h1 className="font-light tracking-[-0.03em] leading-[0.95]"
-                style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(56px, 9vw, 132px)" }}>
-              Uma luz.<br />
-              <span className="italic" style={{
-                backgroundImage: `linear-gradient(90deg, ${SPECTRUM.join(",")})`,
-                WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
-              }}>Muitas ações.</span>
-            </h1>
-            <p className="mt-8 text-lg text-black/70 leading-relaxed max-w-2xl">
-              CRM, WhatsApp, financeiro, projetos, documentos e automações — refratados em uma única superfície onde uma IA orquestra o dia-a-dia da sua PME.
-            </p>
-
-            <div className="mt-10 flex flex-wrap items-center gap-4">
-              <button onClick={primaryCta} data-testid="hero-cta"
-                className="group relative overflow-hidden rounded-md bg-[#0A0A14] text-[#F5F1EA] h-14 px-8 text-base flex items-center gap-3 hover:bg-black transition-colors">
-                <span className="absolute left-0 right-0 bottom-0 h-[3px] flex opacity-80 group-hover:opacity-100">
-                  {SPECTRUM.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
-                </span>
-                Começar agora
-                <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-              </button>
-              <a href="#modulos" className="text-sm text-black/70 hover:text-black underline underline-offset-4 decoration-black/30">
-                Ver módulos
-              </a>
-              <div className="flex items-center gap-2 text-xs text-black/50">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Sem cartão · 14 dias grátis
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center relative z-10">
+            {/* Left: headline + trust strip */}
+            <div className="lg:col-span-7">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="flex items-center gap-1">
+                  {SPECTRUM.map((c) => <div key={c} className="h-1.5 w-1.5 rounded-full" style={{ background: c, opacity: 0.9 }} />)}
+                </div>
+                <div className="text-[11px] uppercase tracking-[0.24em] text-black/55">Sistema operacional · plataforma para PMEs</div>
               </div>
+
+              <h1 className="font-light tracking-[-0.025em] leading-[1.02]"
+                  style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(50px, 6.8vw, 104px)" }}>
+                A operação inteira,<br />
+                <em className="italic font-normal">em uma superfície.</em>
+              </h1>
+
+              <p className="mt-8 text-lg text-black/65 leading-[1.6] max-w-xl">
+                CRM, WhatsApp, financeiro, projetos e automações reunidos em uma única interface — orquestrados por um copiloto de IA que conhece cada canto do seu negócio.
+              </p>
+
+              <div className="mt-10 flex flex-wrap items-center gap-5">
+                <button onClick={primaryCta} data-testid="hero-cta"
+                  className="group relative overflow-hidden rounded-md bg-[#0A0A14] text-[#F5F1EA] h-14 px-8 text-base flex items-center gap-3 hover:bg-black transition-colors">
+                  <span className="absolute left-0 right-0 bottom-0 h-[3px] flex opacity-70 group-hover:opacity-100 transition-opacity">
+                    {SPECTRUM.map((c) => <span key={c} className="flex-1" style={{ background: c }} />)}
+                  </span>
+                  Começar agora
+                  <ArrowUpRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </button>
+                <a href="#demo" data-testid="hero-demo-link" className="text-sm text-black/75 hover:text-black underline underline-offset-4 decoration-black/30 flex items-center gap-2">
+                  <Play className="h-3.5 w-3.5" fill="currentColor" />
+                  Assistir demo · 60s
+                </a>
+              </div>
+
+              {/* Trust strip */}
+              <div className="mt-14 pt-8 border-t border-black/10 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-xl">
+                {[
+                  ["8", "módulos nativos"],
+                  ["Claude 4.5", "copiloto de IA"],
+                  ["Twilio", "WhatsApp real"],
+                  ["14 dias", "grátis · sem cartão"],
+                ].map(([n, l]) => (
+                  <div key={l} className="min-w-0">
+                    <div className="text-[26px] leading-none tracking-tight" style={{ fontFamily: "'Fraunces', serif" }}>{n}</div>
+                    <div className="text-[11px] text-black/50 mt-2 uppercase tracking-widest">{l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: live Copiloto preview card */}
+            <div className="lg:col-span-5">
+              <CopilotoPreview />
             </div>
           </div>
 
