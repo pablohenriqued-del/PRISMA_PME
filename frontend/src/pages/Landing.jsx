@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import {
   ArrowUpRight, Check, Sparkles, MessageCircle, Users2, Wallet, Kanban,
-  FileText, Zap, UserCog,
+  FileText, Zap, UserCog, Play, Volume2, VolumeX,
 } from "lucide-react";
 
 const SPECTRUM = ["#7C5CFF", "#E940A0", "#FF6A55", "#F5A623", "#A8D62F"];
@@ -14,6 +14,86 @@ const SHOTS = [
   { src: "/screenshots/whatsapp.jpg", label: "WhatsApp", desc: "Inbox conectada ao Twilio conversando pelo número da sua empresa." },
   { src: "/screenshots/automacoes.jpg", label: "Automações", desc: "Trigger → ação, log de execuções e botão Testar em cada regra." },
 ];
+
+function DemoVideo() {
+  const ref = useRef(null);
+  const [muted, setMuted] = useState(true);
+  const [playing, setPlaying] = useState(false);
+
+  const toggleSound = () => {
+    if (!ref.current) return;
+    ref.current.muted = !ref.current.muted;
+    setMuted(ref.current.muted);
+    if (ref.current.paused) ref.current.play().catch(() => {});
+  };
+
+  const bigPlay = () => {
+    if (!ref.current) return;
+    ref.current.muted = false;
+    setMuted(false);
+    ref.current.currentTime = 0;
+    ref.current.play().catch(() => {});
+  };
+
+  return (
+    <div className="relative group" data-testid="demo-video-wrap">
+      <div className="rounded-xl border border-black/10 shadow-[0_50px_100px_-20px_rgba(10,10,20,0.35)] overflow-hidden bg-black">
+        <div className="h-9 bg-black/[0.06] border-b border-white/5 flex items-center gap-1.5 px-4">
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="h-2.5 w-2.5 rounded-full bg-white/15" />
+          <div className="ml-4 text-[11px] font-mono text-white/40">prisma.app · walkthrough · 60s</div>
+          <div className="ml-auto flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-white/50">
+            <div className="h-1.5 w-1.5 rounded-full bg-red-500 animate-pulse" />
+            ao vivo
+          </div>
+        </div>
+        <div className="relative aspect-[16/9] bg-black">
+          <video
+            ref={ref}
+            data-testid="demo-video"
+            className="absolute inset-0 w-full h-full object-cover"
+            src="/prisma-demo.webm"
+            poster="/screenshots/dashboard.jpg"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+          />
+          {/* Overlay CTA when muted */}
+          {muted && (
+            <button
+              onClick={bigPlay}
+              data-testid="demo-unmute"
+              className="absolute inset-0 flex items-center justify-center bg-black/10 hover:bg-black/25 transition-colors"
+            >
+              <div className="flex items-center gap-3 px-5 py-3 rounded-full bg-white/95 text-[#0A0A14] text-sm font-medium shadow-lg">
+                <Play className="h-4 w-4" fill="currentColor" />
+                Reproduzir com som
+              </div>
+            </button>
+          )}
+          {/* Sound toggle */}
+          <button
+            onClick={toggleSound}
+            data-testid="demo-sound-toggle"
+            className="absolute bottom-4 right-4 h-10 w-10 rounded-full bg-black/60 backdrop-blur text-white hover:bg-black/80 flex items-center justify-center transition-colors"
+            aria-label={muted ? "Ativar som" : "Desativar som"}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+      {/* Chromatic underline */}
+      <div className="absolute -bottom-2 left-8 right-8 h-1 rounded-full opacity-60 flex overflow-hidden">
+        {SPECTRUM.map((c) => <div key={c} style={{ background: c, flex: 1 }} />)}
+      </div>
+    </div>
+  );
+}
 
 function ScreenshotRotator() {
   const [i, setI] = useState(0);
@@ -251,6 +331,22 @@ export default function Landing() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* DEMO VIDEO */}
+      <section id="demo" className="py-24 border-t border-black/10 bg-white/60">
+        <div className="max-w-6xl mx-auto px-6 lg:px-10">
+          <div className="max-w-3xl mb-10">
+            <div className="overline text-black/50 mb-4">demo · 60 segundos</div>
+            <h2 className="tracking-[-0.02em] leading-[1.05]" style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(36px, 4.5vw, 60px)" }}>
+              Veja o Prisma <em className="italic">em ação.</em>
+            </h2>
+            <p className="mt-5 text-black/70 max-w-xl">
+              Um minuto passeando por CRM, WhatsApp, automações rodando e o copiloto respondendo — sem edição, é a plataforma real.
+            </p>
+          </div>
+          <DemoVideo />
         </div>
       </section>
 
