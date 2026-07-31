@@ -23,6 +23,9 @@ from datetime import datetime, timezone, timedelta
 from twilio.rest import Client as TwilioClient
 from twilio.twiml.messaging_response import MessagingResponse
 import stripe
+import hashlib
+import secrets
+import io as _io
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -656,6 +659,7 @@ class TaskIn(BaseModel):
     status: str = "a_fazer"
     assignee: str = ""
     due_date: str = ""
+    custom_fields: List[Dict[str, Any]] = []
 
 @api.post("/projects/{project_id}/tasks")
 async def create_task(project_id: str, body: TaskIn, user: dict = Depends(current_user)):
@@ -665,13 +669,68 @@ async def create_task(project_id: str, body: TaskIn, user: dict = Depends(curren
     doc.pop("_id", None)
     return doc
 
-class TaskStatus(BaseModel):
-    status: str
+class TaskPatch(BaseModel):
+    status: Optional[str] = None
+    title: Optional[str] = None
+    assignee: Optional[str] = None
+    due_date: Optional[str] = None
+    custom_fields: Optional[List[Dict[str, Any]]] = None
 
 @api.patch("/tasks/{task_id}")
-async def update_task(task_id: str, body: TaskStatus, user: dict = Depends(current_user)):
-    await db.tasks.update_one({"task_id": task_id, "org_id": user["org_id"]}, {"$set": {"status": body.status}})
+async def update_task(task_id: str, body: TaskPatch, user: dict = Depends(current_user)):
+    upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "custom_fields" in upd:
+        upd["custom_fields"] = [dict(c) for c in upd["custom_fields"]]
+    if upd:
+        await db.tasks.update_one({"task_id": task_id, "org_id": user["org_id"]}, {"$set": upd})
     return {"ok": True}
+
+# ----------------- Task time tracking -----------------
+@api.post("/tasks/{task_id}/time/start")
+async def task_time_start(task_id: str, user: dict = Depends(current_user)):
+    task = await db.tasks.find_one({"task_id": task_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not task: raise HTTPException(404, "Task não encontrada")
+    logs = task.get("time_logs") or []
+    if any(l for l in logs if not l.get("end_at")):
+        return {"ok": True, "already_running": True}
+    log = {"log_id": gen_id("tl"), "start_at": iso(now_utc()), "end_at": None, "seconds": 0, "user_id": user["user_id"]}
+    await db.tasks.update_one({"task_id": task_id, "org_id": user["org_id"]}, {"$push": {"time_logs": log}})
+    return {"ok": True, "log": log}
+
+@api.post("/tasks/{task_id}/time/stop")
+async def task_time_stop(task_id: str, user: dict = Depends(current_user)):
+    task = await db.tasks.find_one({"task_id": task_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not task: raise HTTPException(404, "Task não encontrada")
+    logs = task.get("time_logs") or []
+    active = [i for i, l in enumerate(logs) if not l.get("end_at")]
+    if not active: return {"ok": True, "no_active": True}
+    now = now_utc()
+    total = task.get("total_seconds", 0) or 0
+    for i in active:
+        try: start = datetime.fromisoformat(logs[i]["start_at"].replace("Z","+00:00"))
+        except Exception: start = now
+        secs = max(0, int((now - start).total_seconds()))
+        logs[i]["end_at"] = iso(now)
+        logs[i]["seconds"] = secs
+        total += secs
+    await db.tasks.update_one({"task_id": task_id, "org_id": user["org_id"]},
+                              {"$set": {"time_logs": logs, "total_seconds": total}})
+    return {"ok": True, "total_seconds": total}
+
+class TimeLogIn(BaseModel):
+    seconds: int
+    note: str = ""
+
+@api.post("/tasks/{task_id}/time/log")
+async def task_time_manual(task_id: str, body: TimeLogIn, user: dict = Depends(current_user)):
+    task = await db.tasks.find_one({"task_id": task_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not task: raise HTTPException(404, "Task não encontrada")
+    log = {"log_id": gen_id("tl"), "start_at": iso(now_utc()), "end_at": iso(now_utc()),
+           "seconds": max(0, int(body.seconds)), "note": body.note, "user_id": user["user_id"], "manual": True}
+    total = (task.get("total_seconds", 0) or 0) + log["seconds"]
+    await db.tasks.update_one({"task_id": task_id, "org_id": user["org_id"]},
+                              {"$push": {"time_logs": log}, "$set": {"total_seconds": total}})
+    return {"ok": True, "log": log, "total_seconds": total}
 
 # ----------------- Financeiro -----------------
 class TxIn(BaseModel):
@@ -984,6 +1043,17 @@ class OSItem(BaseModel):
     quantity: float = 1
     unit_price: float = 0
 
+class OSCustomField(BaseModel):
+    name: str
+    type: Literal["text", "number", "date", "select", "money"] = "text"
+    value: Any = None
+    options: Optional[List[str]] = None
+
+class OSRecurrence(BaseModel):
+    enabled: bool = False
+    interval: Literal["weekly", "monthly", "quarterly"] = "monthly"
+    next_run_at: Optional[str] = None
+
 class OSIn(BaseModel):
     title: str
     client_name: str
@@ -995,12 +1065,46 @@ class OSIn(BaseModel):
     notes: str = ""
     due_date: str = ""
     status: str = "orcamento"
+    custom_fields: List[OSCustomField] = []
+    recurrence: Optional[OSRecurrence] = None
+    template_id: Optional[str] = None
 
 def _os_total(items: List[Dict[str, Any]]) -> float:
     return round(sum((it.get("quantity", 1) or 1) * (it.get("unit_price", 0) or 0) for it in items), 2)
 
+def _next_recurrence_date(interval: str, base: Optional[datetime] = None) -> str:
+    base = base or now_utc()
+    if interval == "weekly": delta = timedelta(days=7)
+    elif interval == "quarterly": delta = timedelta(days=90)
+    else: delta = timedelta(days=30)
+    return iso(base + delta)
+
+def _os_public_url(token: str, origin: Optional[str] = None) -> str:
+    return f"{(origin or 'https://pme-all-in-one.preview.emergentagent.com').rstrip('/')}/os/publica/{token}"
+
+async def _maybe_generate_recurrences(org_id: str):
+    """Lazy scheduler: para cada OS com recurrence.enabled e next_run_at <= now, gera nova OS e reagenda."""
+    now = now_utc()
+    async for parent in db.ordem_servico.find({"org_id": org_id, "recurrence.enabled": True}, {"_id": 0}):
+        rec = parent.get("recurrence") or {}
+        nra = rec.get("next_run_at")
+        try: due = datetime.fromisoformat(nra.replace("Z", "+00:00")) if nra else None
+        except Exception: due = None
+        if not due or due > now: continue
+        new_os = {**{k: parent[k] for k in ("client_name","client_email","client_phone","lead_id","items","notes","custom_fields") if k in parent},
+                  "title": parent["title"], "status": "orcamento",
+                  "os_id": gen_id("os"), "org_id": org_id, "created_at": iso(now),
+                  "total": _os_total(parent.get("items", [])),
+                  "public_token": secrets.token_urlsafe(24),
+                  "recurrence": None, "parent_recurrence_id": parent["os_id"],
+                  "created_by": "recurrence"}
+        await db.ordem_servico.insert_one(new_os)
+        rec["next_run_at"] = _next_recurrence_date(rec.get("interval", "monthly"), due)
+        await db.ordem_servico.update_one({"os_id": parent["os_id"]}, {"$set": {"recurrence": rec}})
+
 @api.get("/os")
 async def list_os(user: dict = Depends(current_user)):
+    await _maybe_generate_recurrences(user["org_id"])
     items = await db.ordem_servico.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
     return {"items": items}
 
@@ -1008,12 +1112,17 @@ async def list_os(user: dict = Depends(current_user)):
 async def create_os(body: OSIn, user: dict = Depends(current_user)):
     doc = body.model_dump()
     doc["items"] = [dict(i) for i in doc["items"]]
+    doc["custom_fields"] = [dict(c) for c in doc.get("custom_fields", [])]
+    rec = doc.get("recurrence")
+    if rec and rec.get("enabled") and not rec.get("next_run_at"):
+        rec["next_run_at"] = _next_recurrence_date(rec.get("interval", "monthly"))
     doc.update({
         "os_id": gen_id("os"),
         "org_id": user["org_id"],
         "created_at": iso(now_utc()),
         "total": _os_total(doc["items"]),
         "created_by": user["user_id"],
+        "public_token": secrets.token_urlsafe(24),
     })
     await db.ordem_servico.insert_one(doc)
     doc.pop("_id", None)
@@ -1030,6 +1139,8 @@ class OSPatch(BaseModel):
     notes: Optional[str] = None
     due_date: Optional[str] = None
     status: Optional[str] = None
+    custom_fields: Optional[List[OSCustomField]] = None
+    recurrence: Optional[OSRecurrence] = None
 
 @api.patch("/os/{os_id}")
 async def update_os(os_id: str, body: OSPatch, user: dict = Depends(current_user)):
@@ -1037,6 +1148,12 @@ async def update_os(os_id: str, body: OSPatch, user: dict = Depends(current_user
     if "items" in upd:
         upd["items"] = [dict(i) for i in upd["items"]]
         upd["total"] = _os_total(upd["items"])
+    if "custom_fields" in upd:
+        upd["custom_fields"] = [dict(c) for c in upd["custom_fields"]]
+    if "recurrence" in upd:
+        r = upd["recurrence"]
+        if r and r.get("enabled") and not r.get("next_run_at"):
+            r["next_run_at"] = _next_recurrence_date(r.get("interval", "monthly"))
     if upd:
         await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]}, {"$set": upd})
     return {"ok": True}
@@ -1075,6 +1192,9 @@ async def os_from_lead(body: OSFromLead, user: dict = Depends(current_user)):
         "notes": "",
         "due_date": "",
         "status": "orcamento",
+        "custom_fields": [],
+        "recurrence": None,
+        "public_token": secrets.token_urlsafe(24),
         "created_at": iso(now_utc()),
         "created_by": user["user_id"],
     }
@@ -1108,6 +1228,271 @@ async def os_to_project(os_id: str, user: dict = Depends(current_user)):
         {"$set": {"project_id": proj_id, "status": "em_execucao"}},
     )
     return {"ok": True, "project_id": proj_id}
+
+# ----------------- OS Templates -----------------
+class OSTemplateIn(BaseModel):
+    name: str
+    title: str = ""
+    items: List[OSItem] = []
+    custom_fields: List[OSCustomField] = []
+    notes: str = ""
+
+@api.get("/os/templates")
+async def list_os_templates(user: dict = Depends(current_user)):
+    items = await db.os_templates.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return {"items": items}
+
+@api.post("/os/templates")
+async def create_os_template(body: OSTemplateIn, user: dict = Depends(current_user)):
+    doc = body.model_dump()
+    doc["items"] = [dict(i) for i in doc["items"]]
+    doc["custom_fields"] = [dict(c) for c in doc["custom_fields"]]
+    doc.update({"template_id": gen_id("tpl"), "org_id": user["org_id"], "created_at": iso(now_utc())})
+    await db.os_templates.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.delete("/os/templates/{template_id}")
+async def delete_os_template(template_id: str, user: dict = Depends(current_user)):
+    await db.os_templates.delete_one({"template_id": template_id, "org_id": user["org_id"]})
+    return {"ok": True}
+
+class OSFromTemplate(BaseModel):
+    template_id: str
+    client_name: str
+    client_email: str = ""
+    client_phone: str = ""
+    title: Optional[str] = None
+
+@api.post("/os/from-template")
+async def os_from_template(body: OSFromTemplate, user: dict = Depends(current_user)):
+    tpl = await db.os_templates.find_one({"template_id": body.template_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not tpl:
+        raise HTTPException(404, "Template não encontrado")
+    doc = {
+        "os_id": gen_id("os"), "org_id": user["org_id"],
+        "title": body.title or tpl.get("title") or tpl["name"],
+        "client_name": body.client_name, "client_email": body.client_email, "client_phone": body.client_phone,
+        "lead_id": None, "project_id": None,
+        "items": [dict(i) for i in tpl.get("items", [])],
+        "custom_fields": [dict(c) for c in tpl.get("custom_fields", [])],
+        "notes": tpl.get("notes", ""),
+        "due_date": "", "status": "orcamento",
+        "recurrence": None,
+        "template_id": body.template_id,
+        "public_token": secrets.token_urlsafe(24),
+        "created_at": iso(now_utc()), "created_by": user["user_id"],
+    }
+    doc["total"] = _os_total(doc["items"])
+    await db.ordem_servico.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+# ----------------- OS Send (Email + WhatsApp) -----------------
+def _os_html(o: Dict[str, Any], url: str) -> str:
+    items_html = "".join([
+        f"<tr><td style='padding:8px;border-bottom:1px solid #eee'>{(it.get('description') or '')}</td>"
+        f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:right'>{it.get('quantity',1)}</td>"
+        f"<td style='padding:8px;border-bottom:1px solid #eee;text-align:right'>R$ {float(it.get('unit_price',0)):,.2f}</td></tr>"
+        for it in o.get("items", [])
+    ])
+    total = float(o.get("total", 0))
+    return f"""
+<div style="font-family:Helvetica,Arial,sans-serif;color:#0A0A14;max-width:600px;margin:0 auto;padding:24px">
+  <div style="border-bottom:2px solid #0A0A14;padding-bottom:16px;margin-bottom:24px">
+    <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888">Ordem de serviço</div>
+    <div style="font-size:22px;margin-top:8px">{o.get('title','')}</div>
+  </div>
+  <p style="color:#333;line-height:1.5">Olá, {o.get('client_name','')}!</p>
+  <p style="color:#333;line-height:1.5">Segue sua proposta. Você pode <b>aceitar, assinar e pagar via PIX</b> em um único link:</p>
+  <p style="text-align:center;margin:28px 0">
+    <a href="{url}" style="background:#0A0A14;color:#F5F1EA;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:600">Abrir proposta</a>
+  </p>
+  <table style="width:100%;border-collapse:collapse;margin-top:16px">
+    <thead>
+      <tr style="background:#F5F1EA">
+        <th style="padding:10px;text-align:left;font-size:11px;letter-spacing:1px">DESCRIÇÃO</th>
+        <th style="padding:10px;text-align:right;font-size:11px;letter-spacing:1px">QTD</th>
+        <th style="padding:10px;text-align:right;font-size:11px;letter-spacing:1px">VALOR</th>
+      </tr>
+    </thead>
+    <tbody>{items_html}</tbody>
+    <tfoot>
+      <tr><td colspan="2" style="padding:12px;text-align:right;font-weight:700">Total</td>
+      <td style="padding:12px;text-align:right;font-weight:700">R$ {total:,.2f}</td></tr>
+    </tfoot>
+  </table>
+  <p style="color:#888;font-size:12px;margin-top:32px">Este link expira em 30 dias. Enviado por Prisma.</p>
+</div>"""
+
+def _os_wa_text(o: Dict[str, Any], url: str) -> str:
+    total = float(o.get("total", 0))
+    return (
+        f"Olá, {o.get('client_name','')}! Aqui está sua proposta da *{o.get('title','')}*.\n\n"
+        f"Total: *R$ {total:,.2f}*\n\n"
+        f"Você pode aceitar, assinar e pagar por PIX em um clique:\n{url}\n\n"
+        "Qualquer dúvida, é só responder por aqui. — Prisma"
+    )
+
+class OSSendIn(BaseModel):
+    channels: List[Literal["email", "whatsapp"]] = ["email", "whatsapp"]
+    origin_url: Optional[str] = None
+
+@api.post("/os/{os_id}/send")
+async def send_os(os_id: str, body: OSSendIn, user: dict = Depends(current_user)):
+    o = await db.ordem_servico.find_one({"os_id": os_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not o: raise HTTPException(404, "OS não encontrada")
+    token = o.get("public_token") or secrets.token_urlsafe(24)
+    if not o.get("public_token"):
+        await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]}, {"$set": {"public_token": token}})
+    url = _os_public_url(token, body.origin_url)
+    results: Dict[str, Any] = {"url": url}
+    if "email" in body.channels and o.get("client_email"):
+        results["email"] = await send_email(o["client_email"], f"Proposta — {o.get('title','')}", _os_html(o, url))
+    if "whatsapp" in body.channels and o.get("client_phone"):
+        results["whatsapp"] = await send_whatsapp(o["client_phone"], _os_wa_text(o, url))
+    await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]},
+        {"$set": {"sent_at": iso(now_utc()), "sent_channels": body.channels}})
+    return {"ok": True, **results}
+
+# ----------------- Portal público do cliente -----------------
+def _sanitize_os_for_public(o: Dict[str, Any]) -> Dict[str, Any]:
+    keep = ("os_id","title","client_name","client_email","items","total","status","notes","due_date",
+            "created_at","sent_at","signed_at","signed_by","paid_at","custom_fields")
+    return {k: o.get(k) for k in keep if k in o}
+
+@api.get("/public/os/{token}")
+async def public_get_os(token: str):
+    o = await db.ordem_servico.find_one({"public_token": token}, {"_id": 0})
+    if not o: raise HTTPException(404, "Não encontrada")
+    org = await db.orgs.find_one({"org_id": o["org_id"]}, {"_id": 0}) or {"name": "Prisma"}
+    return {"os": _sanitize_os_for_public(o), "brand": {"name": org.get("name", "Prisma")}}
+
+@api.get("/public/os/{token}/related")
+async def public_related(token: str):
+    o = await db.ordem_servico.find_one({"public_token": token}, {"_id": 0})
+    if not o: raise HTTPException(404, "Não encontrada")
+    email = (o.get("client_email") or "").strip().lower()
+    if not email:
+        return {"items": []}
+    items = await db.ordem_servico.find(
+        {"org_id": o["org_id"], "client_email": {"$regex": f"^{email}$", "$options": "i"},
+         "public_token": {"$ne": token}}, {"_id": 0}
+    ).sort("created_at", -1).to_list(200)
+    return {"items": [_sanitize_os_for_public(i) for i in items]}
+
+class OSSignIn(BaseModel):
+    full_name: str
+    email: str = ""
+    accept_terms: bool = True
+
+@api.post("/public/os/{token}/sign")
+async def public_sign(token: str, body: OSSignIn, request: Request):
+    if not body.accept_terms:
+        raise HTTPException(400, "É necessário aceitar os termos")
+    o = await db.ordem_servico.find_one({"public_token": token}, {"_id": 0})
+    if not o: raise HTTPException(404, "Não encontrada")
+    if o.get("signed_at"): raise HTTPException(400, "Já assinada")
+    ip = request.client.host if request.client else ""
+    ua = request.headers.get("user-agent", "")[:200]
+    now = iso(now_utc())
+    payload = f"{o['os_id']}|{body.full_name}|{body.email}|{now}|{ip}"
+    sig_hash = hashlib.sha256(payload.encode()).hexdigest()
+    upd = {
+        "signed_at": now, "signed_by": body.full_name, "signed_email": body.email,
+        "signed_ip": ip, "signed_ua": ua, "signature_hash": sig_hash, "status": "aprovada",
+    }
+    await db.ordem_servico.update_one({"os_id": o["os_id"]}, {"$set": upd})
+    # Notify owner
+    owner = await db.users.find_one({"org_id": o["org_id"]}, {"_id": 0})
+    if owner and owner.get("email"):
+        await send_email(owner["email"], f"Proposta assinada — {o.get('title','')}",
+            f"<p><b>{body.full_name}</b> assinou a proposta <b>{o.get('title','')}</b> (R$ {float(o.get('total',0)):,.2f}).</p><p>Hash: <code>{sig_hash[:16]}…</code></p>")
+    return {"ok": True, "signature_hash": sig_hash, "signed_at": now}
+
+class OSPublicCheckoutIn(BaseModel):
+    origin_url: str
+
+@api.post("/public/os/{token}/checkout")
+async def public_os_checkout(token: str, body: OSPublicCheckoutIn):
+    o = await db.ordem_servico.find_one({"public_token": token}, {"_id": 0})
+    if not o: raise HTTPException(404, "Não encontrada")
+    amount = int(round(float(o.get("total") or 0) * 100))
+    if amount <= 0: raise HTTPException(400, "OS sem valor")
+    base_kwargs = dict(
+        line_items=[{"price_data": {"currency": "brl", "product_data": {"name": o.get("title") or o["os_id"]},
+                                    "unit_amount": amount}, "quantity": 1}],
+        mode="payment",
+        success_url=f"{body.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{body.origin_url}/os/publica/{token}",
+        metadata={"os_id": o["os_id"], "org_id": o["org_id"], "public_token": token},
+    )
+    try:
+        session = stripe.checkout.Session.create(**base_kwargs,
+            payment_method_types=["card","pix"], payment_method_options={"pix":{"expires_after_seconds":3600}})
+        pix = True
+    except stripe.error.StripeError as e:
+        if "pix" in (getattr(e,"user_message",None) or str(e)).lower():
+            session = stripe.checkout.Session.create(**base_kwargs); pix = False
+        else:
+            raise HTTPException(400, f"Stripe: {getattr(e,'user_message',None) or str(e)[:200]}")
+    await db.payment_transactions.insert_one({
+        "session_id": session.id, "lookup_key": "os_public",
+        "amount": amount, "currency": "brl", "status": "initiated", "payment_status": "pending",
+        "org_id": o["org_id"], "os_id": o["os_id"], "is_pix_enabled": pix, "is_subscription": False,
+        "created_at": iso(now_utc()), "updated_at": iso(now_utc()),
+    })
+    return {"checkout_url": session.url, "session_id": session.id, "pix_enabled": pix}
+
+@api.get("/public/os/{token}/receipt")
+async def public_receipt(token: str):
+    o = await db.ordem_servico.find_one({"public_token": token}, {"_id": 0})
+    if not o: raise HTTPException(404, "Não encontrada")
+    if not o.get("signed_at"): raise HTTPException(400, "Proposta ainda não assinada")
+    # Generate PDF with reportlab
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.units import cm
+    buf = _io.BytesIO()
+    doc = SimpleDocTemplate(buf, pagesize=A4, topMargin=2*cm, bottomMargin=2*cm, leftMargin=2*cm, rightMargin=2*cm)
+    styles = getSampleStyleSheet()
+    story: List[Any] = []
+    story.append(Paragraph("<b>COMPROVANTE DE ASSINATURA ELETRÔNICA</b>", styles["Title"]))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph(f"<b>Ordem de Serviço:</b> {o.get('title','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Cliente:</b> {o.get('client_name','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Total:</b> R$ {float(o.get('total',0)):,.2f}", styles["Normal"]))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("<b>Itens</b>", styles["Heading3"]))
+    data = [["Descrição", "Qtd", "Valor unit.", "Subtotal"]]
+    for it in o.get("items", []):
+        q = float(it.get("quantity", 1) or 1); v = float(it.get("unit_price", 0) or 0)
+        data.append([it.get("description", ""), f"{q:g}", f"R$ {v:,.2f}", f"R$ {q*v:,.2f}"])
+    t = Table(data, colWidths=[8*cm, 2*cm, 3*cm, 3*cm])
+    t.setStyle(TableStyle([
+        ("BACKGROUND",(0,0),(-1,0), colors.HexColor("#F5F1EA")),
+        ("GRID",(0,0),(-1,-1),0.25, colors.grey),
+        ("FONTSIZE",(0,0),(-1,-1), 9),
+    ]))
+    story.append(t)
+    story.append(Spacer(1, 16))
+    story.append(Paragraph("<b>Assinatura Eletrônica</b>", styles["Heading3"]))
+    story.append(Paragraph(f"<b>Assinado por:</b> {o.get('signed_by','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Email:</b> {o.get('signed_email','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Data/Hora (UTC):</b> {o.get('signed_at','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>IP:</b> {o.get('signed_ip','')}", styles["Normal"]))
+    story.append(Paragraph(f"<b>Hash SHA-256:</b> <font face='Courier'>{o.get('signature_hash','')}</font>", styles["Normal"]))
+    story.append(Spacer(1, 12))
+    story.append(Paragraph("<i>Documento assinado eletronicamente conforme MP 2.200-2/2001 e Lei 14.063/2020.</i>", ParagraphStyle("legal", parent=styles["Italic"], fontSize=8)))
+    doc.build(story)
+    buf.seek(0)
+    from fastapi.responses import Response
+    return Response(content=buf.getvalue(), media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="comprovante-{o["os_id"]}.pdf"'})
+
+
 
 # ----------------- Stripe / PIX Payments -----------------
 class CheckoutIn(BaseModel):

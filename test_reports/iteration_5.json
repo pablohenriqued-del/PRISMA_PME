@@ -1,0 +1,41 @@
+{
+  "summary": "Prisma v1.3 (iteration 5) — testing OS custom_fields/recurrence/templates/send, public portal (get/related/sign/checkout/receipt), task time tracking. Backend: 17/17 pytest passing (test_iteration_5_prisma_v13.py). Frontend: /app/os renders and Nova OS dialog + recurrence toggle + '+ campo' + save-tpl-<id> button + send-os work; OSPublica portal end-to-end sign + receipt + pay button confirmed; Projetos page timer start/stop persists total_seconds and open-task-<id> opens TaskDetail modal with Custom Fields + manual minutes input. ONE HIGH-priority UI bug found: on /app/os the 'Link' button (copy-link-<id>) uses navigator.clipboard.writeText WITHOUT catching the returned promise. On insecure/permission-denied contexts this triggers an unhandled promise rejection, which surfaces the CRA runtime error overlay, blocking all further clicks (including save-tpl dialog) on the page.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "OrdemServico.jsx copyLink (line 136-140)",
+        "issue": "navigator.clipboard.writeText(url) is called without .catch/try. When the browser denies the Clipboard permission (any non-user-gesture, iframes, or preview environment), an unhandled promise rejection is thrown ('Failed to execute writeText on Clipboard: Write permission denied') and the CRA runtime error overlay covers the entire page, blocking further UI (e.g., save-tpl-<id> dialog does not open, all buttons are hidden behind the red overlay). Fix: wrap in try/catch and fallback to document.execCommand('copy') or show toast on failure. Toast 'Link do portal copiado' is shown but the promise still rejects.",
+        "selector": "[data-testid=\"copy-link-<id>\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_5_prisma_v13.py",
+    "/app/test_reports/pytest/iter5_results.xml"
+  ],
+  "action_items": [
+    "OrdemServico.jsx copyLink: change `navigator.clipboard.writeText(url);` to `try { await navigator.clipboard.writeText(url); toast.success(...); } catch { /* fallback via textarea+execCommand OR just show toast */ }`. This unblocks save-as-template UI flow and eliminates the CRA overlay in prod-like environments where Clipboard API is restricted.",
+    "(Nice-to-have) server.py grew to 1902 lines — consider splitting os.py, portal.py, payments.py, tasks.py modules."
+  ],
+  "critical_code_review_comments": [
+    "OrdemServico.jsx line 138: unhandled clipboard promise → HIGH-impact UX bug (overlays kill all clicks post-copy).",
+    "server.py file size 1902 lines — exceeds 700 line guideline; consider modular split.",
+    "GET /api/public/os/{token} correctly sanitizes response (no org_id/public_token leak) — verified in test.",
+    "POST /api/public/os/{token}/sign correctly enforces idempotency (400 on re-sign) and accept_terms guard.",
+    "Task time tracking: no cap on concurrent active logs across users (single 'active' state per task) — acceptable for MVP but could be documented."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_5_prisma_v13.py (new)"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "~95% (portal & projetos flows OK; OS 'Link' copy causes CRA overlay)"},
+  "test_credentials": "session_token=test_session_1785228939986 (cookie or Bearer). test.user@example.com / org-1785228939986. Loaded from /app/memory/test_credentials.md.",
+  "seed_data_creation": "TEST_ prefixed OS/tasks/templates created and cleaned up in pytest teardown; residual UI-created rows (TEST_UI_OS_v13, TEST_UI_TPL_v13, TEST_UI_PROJ, TEST_UI_TASK) safe (org-scoped).",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Full v1.3 backend contract verified in /app/backend/tests/test_iteration_5_prisma_v13.py (17 tests, ~6s serial with -n 0). Recurrence lazy generation verified via direct mongo backdating + GET /api/os. Twilio WhatsApp returns whatsapp.status='error' as noted by main agent (channel not configured) — treated as graceful. Stripe PIX: `pix_enabled` came back true in this env for public OS checkout. PDF receipt: content-type application/pdf, size ~2.7KB. Frontend fix needed only for copyLink promise handling; the rest of the flows (sign, pay, receipt, timer, templates) are green.",
+  "rca of the issue": "OrdemServico.jsx line 136-140 defines copyLink(o) => { navigator.clipboard.writeText(url); toast.success('Link do portal copiado.') }. In secure origins with user gesture the writeText resolves. In this preview environment (Playwright headless / cross-origin / no explicit permission) the returned Promise rejects, but since there is no .catch and it's not awaited inside try/catch, React's unhandled rejection handler surfaces the CRA dev overlay ('Uncaught runtime errors: Failed to execute writeText on Clipboard: Write permission denied'). The overlay is z-index max and covers ALL page content, causing any subsequent click (e.g. save-tpl-<id>) to fail. Reproduce: /app/os → click any copy-link-<id> → red overlay appears. Fix: `try { await navigator.clipboard.writeText(url); } catch (e) { /* toast fallback */ }`. Same pattern should be audited for OSPublica.jsx and other pages if similar copy actions exist."
+}
