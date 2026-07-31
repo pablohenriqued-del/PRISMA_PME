@@ -133,10 +133,20 @@ export default function OrdemServico() {
     finally { setSendingId(null); }
   };
 
-  const copyLink = (o) => {
+  const copyLink = async (o) => {
     const url = `${window.location.origin}/os/publica/${o.public_token}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Link do portal copiado");
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const ta = document.createElement("textarea");
+        ta.value = url; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } finally { document.body.removeChild(ta); }
+      }
+      toast.success("Link do portal copiado");
+    } catch {
+      window.prompt("Copie o link do portal:", url);
+    }
   };
 
   const updateStatus = async (o, status) => {

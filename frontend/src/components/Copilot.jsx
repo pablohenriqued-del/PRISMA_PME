@@ -93,7 +93,11 @@ function ProposalDialog({ open, onOpenChange, onDone }) {
     } catch { toast.error("Falha ao gerar proposta"); }
     finally { setLoading(false); }
   };
-  const copy = () => { if (result?.proposal) { navigator.clipboard.writeText(result.proposal); toast.success("Copiado"); } };
+  const copy = async () => {
+    if (!result?.proposal) return;
+    try { await navigator.clipboard.writeText(result.proposal); toast.success("Copiado"); }
+    catch { window.prompt("Copie manualmente:", result.proposal.slice(0, 500)); }
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="copilot-proposal-dialog">
@@ -144,7 +148,11 @@ function ReportDialog({ open, onOpenChange, onDone }) {
     } catch { toast.error("Falha ao gerar relatório"); }
     finally { setLoading(false); }
   };
-  const copy = () => { if (result?.report) { navigator.clipboard.writeText(result.report); toast.success("Copiado"); } };
+  const copy = async () => {
+    if (!result?.report) return;
+    try { await navigator.clipboard.writeText(result.report); toast.success("Copiado"); }
+    catch { window.prompt("Copie manualmente:", result.report.slice(0, 500)); }
+  };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="copilot-report-dialog">

@@ -1,49 +1,51 @@
 # Prisma — PRD
 
 ## Problema
-Plataforma modular para PMEs brasileiras com IA nativa, automações, WhatsApp, cobrança PIX e ordem de serviço — resolve o dia a dia numa única tela.
+Plataforma modular para PMEs brasileiras. Une CRM, WhatsApp, Projetos, Financeiro, Documentos, Ordem de Serviço, Automações, Copiloto IA e Portal do Cliente com pagamento PIX.
 
-## Módulos (v1.2 — 2026-02-28)
-- **IA Copiloto** — Claude Sonnet 4.5 streaming + **ações operacionais** (criar tarefas, gerar propostas, gerar relatórios) via LLM → grava em Documentos.
-- **CRM** — Kanban de leads, drag-and-drop, phone E.164.
-- **Ordem de Serviço (novo)** — Do orçamento à execução. Cria OS a partir de Lead do CRM, vira Projeto num clique, cobrança **PIX + cartão** via Stripe (valor variável).
-- **WhatsApp** — Inbox + Twilio real (send/webhook) com fallback modo simulação.
-- **Projetos** — Kanban de tarefas multi-projeto.
+## Módulos (v1.3 — 2026-02-28)
+- **Copiloto IA operacional** — Claude Sonnet 4.5 streaming + ações (criar tarefa, gerar proposta, gerar relatório).
+- **CRM** — Kanban de leads.
+- **Ordem de Serviço** — Do orçamento à entrega. Custom fields, recorrência (semanal/mensal/trimestral), templates reutilizáveis, envio por e-mail + WhatsApp, portal público, assinatura eletrônica com hash SHA-256, PDF do comprovante, cobrança PIX/cartão.
+- **Portal do Cliente (público, sem login)** — `/os/publica/{token}`. Cliente vê a proposta, aceita/assina, paga PIX. Lista outras propostas do mesmo e-mail.
+- **WhatsApp** — Inbox + Twilio (send/webhook) com fallback modo simulação.
+- **Projetos** — Kanban de tarefas + **time tracker** (start/stop/log manual) + **custom fields** por tarefa.
 - **Financeiro** — Fluxo de caixa, status vencida dispara automação.
-- **Documentos** — Upload real via Emergent Object Storage; guarda propostas/relatórios gerados pelo Copiloto.
+- **Documentos** — Upload real + guarda propostas/relatórios do Copiloto.
 - **Automações** — Motor real (novo_lead, fatura_vencida, proposta_enviada, nova_conversa_wa).
-- **Equipe** — Convites por e-mail (Resend), papéis owner/admin/comercial/financeiro.
+- **Equipe** — Convites por e-mail, papéis.
 - **Dashboards** — KPIs + gráficos.
-- **Landing (público)** — Checkout Stripe direto nos planos (Starter, Growth, Business) e no **Founder Deal** com contador ao vivo de vagas.
+- **Landing** — Checkout Stripe direto (Starter/Growth/Business + Founder Deal) com contador ao vivo.
 
 ## Arquitetura
-- Backend FastAPI (`/app/backend/server.py`) — rotas `/api/*`, MongoDB.
+- Backend FastAPI (`/app/backend/server.py`, ~1900 linhas) — MongoDB. Rotas `/api/*` + `/api/public/*`.
 - Frontend React 19 + Tailwind + Shadcn + Recharts + framer-motion.
 - Auth: Emergent Google Auth (cookie httpOnly + Bearer).
-- IA: `emergentintegrations` (Claude Sonnet 4.6) + `LlmChat.send_message` para geração one-shot.
-- WhatsApp: Twilio (`+19788384904`).
+- IA: `emergentintegrations` (Claude Sonnet 4.6) — texto e ações.
 - Email: Resend (Emergent-managed).
-- Storage: Emergent Object Storage.
-- **Pagamentos: Stripe (Flow A — sandbox claimable)** — PIX + cartão, BRL. Tax mode: **DIY** (empresa emite NF por conta própria, formato padrão do mercado BR).
+- WhatsApp: Twilio (`+19788384904`).
+- Pagamentos: Stripe Flow A (sandbox claimable). PIX tentado com fallback automático para cartão.
+- PDF: `reportlab` para comprovante de assinatura.
+- Assinatura eletrônica: SHA-256 (nome + e-mail + IP + timestamp + os_id) — MP 2.200-2 / Lei 14.063/2020.
 - Multi-tenant: `org_id` em toda query.
 
 ## Estado (2026-02-28)
-- **Backend**: 14/14 rotas core ✅ + módulo OS (list/create/patch/delete/from-lead/to-project) + Stripe/PIX (checkout, status, webhook, os-checkout) + Copilot ops (create-task, generate-proposal, generate-report, reports) + public founder-deal.
-- **Frontend**: 100% ✅ + nova página OrdemServico, PaymentSuccess/Cancel, Copiloto com ações rápidas, Landing com checkout Stripe e contador ao vivo.
-- **Stripe catalog**: 4 produtos × 7 preços (BRL) provisionados no sandbox.
+- Backend endpoints: 30+ rotas, todas com pytest cobrindo casos principais.
+- Frontend: OS pública em produção, cronômetro nas tarefas, custom fields em OS e tarefas, templates, recorrência automática.
+- Stripe catalog: 4 produtos × 7 preços BRL provisionados.
 
 ## Backlog priorizado
-### P0
-- Ativar WhatsApp no número Twilio (via Sandbox `+14155238886` ou aprovar Sender).
-- Validação `X-Twilio-Signature` no webhook antes de produção.
-
 ### P1
-- Configurar domínio `prisma.com.br` no Emergent.
+- WhatsApp: ativar número Twilio (Sandbox `+14155238886` ou Sender aprovado) → hoje envia por WhatsApp cai em erro gracioso.
 - Rate-limit por org no motor de automações.
-- OS: envio automático da proposta/OS para o cliente por e-mail (usar Resend).
+- Notificar dono por WhatsApp (não só e-mail) quando cliente assina/paga.
 
 ### P2
-- Split de `server.py` em módulos (auth/crm/wa/docs/team/autos/os/pay/copilot).
+- Domínio `prisma.com.br`.
+- Split de `server.py` em módulos.
 - Modo escuro.
 - Copilot: tool-calling nativo (function-calling) em vez de heurística no frontend.
-- Habilitar PIX nativo (quando o sandbox for reivindicado por uma conta BR — hoje faz fallback para cartão).
+- Comentários com @menções nas tarefas.
+- Dependências entre tarefas (aguarda X).
+- Gantt/Timeline view em Projetos.
+- Portal cliente: autenticação por magic-link para ver TODAS as OS (hoje já lista as do mesmo e-mail).
