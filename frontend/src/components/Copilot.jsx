@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,7 +46,7 @@ function TaskDialog({ open, onOpenChange, onDone }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" data-testid="copilot-task-dialog">
-        <DialogHeader><DialogTitle>Criar tarefa</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Criar tarefa</DialogTitle><DialogDescription>Copiloto salva a tarefa em um projeto existente ou cria o projeto &quot;Tarefas do Copiloto&quot;.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4 pt-2">
           <div><Label>Título</Label><Input required data-testid="cop-task-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex.: Ligar para o cliente amanhã" /></div>
           <div className="grid grid-cols-2 gap-3">
@@ -97,7 +97,7 @@ function ProposalDialog({ open, onOpenChange, onDone }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl max-h-[85vh] overflow-y-auto" data-testid="copilot-proposal-dialog">
-        <DialogHeader><DialogTitle>Gerar proposta comercial</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Gerar proposta comercial</DialogTitle><DialogDescription>Proposta gerada por IA (Claude Sonnet 4.5) e salva em Documentos.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4 pt-2">
           <div>
             <Label>Lead (opcional)</Label>

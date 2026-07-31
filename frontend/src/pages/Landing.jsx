@@ -887,7 +887,7 @@ export default function Landing() {
                   </ul>
 
                   <button
-                    onClick={primaryCta}
+                    onClick={() => clickPlanCta(p)}
                     data-testid={`plan-cta-${p.key}`}
                     className={`mt-7 h-11 rounded-md text-sm font-medium transition-colors ${
                       p.highlight
