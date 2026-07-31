@@ -1883,6 +1883,86 @@ async def startup():
 async def root():
     return {"ok": True, "service": "Prisma", "twilio": bool(twilio_client), "email": bool(EMAIL_KEY)}
 
+
+# ----------------- Comments (tasks) + Notifications -----------------
+class CommentIn(BaseModel):
+    body: str
+    mentions: List[Dict[str, str]] = []  # [{user_id, name}]
+
+async def _notify(user_id: str, org_id: str, kind: str, target: Dict[str, Any], body: str):
+    doc = {"notif_id": gen_id("ntf"), "user_id": user_id, "org_id": org_id, "kind": kind,
+           "target": target, "body": body, "read": False, "created_at": iso(now_utc())}
+    await db.notifications.insert_one(doc)
+
+@api.get("/tasks/{task_id}/comments")
+async def list_comments(task_id: str, user: dict = Depends(current_user)):
+    items = await db.comments.find({"task_id": task_id, "org_id": user["org_id"]}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    return {"items": items}
+
+@api.post("/tasks/{task_id}/comments")
+async def create_comment(task_id: str, body: CommentIn, user: dict = Depends(current_user)):
+    task = await db.tasks.find_one({"task_id": task_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not task: raise HTTPException(404, "Task não encontrada")
+    doc = {
+        "comment_id": gen_id("cmt"), "task_id": task_id, "org_id": user["org_id"],
+        "author_id": user["user_id"], "author_name": user.get("name") or user.get("email", "usuário"),
+        "body": body.body, "mentions": body.mentions or [],
+        "created_at": iso(now_utc()),
+    }
+    await db.comments.insert_one(doc)
+    # In-app notifications + email for mentioned users
+    for m in body.mentions or []:
+        uid = m.get("user_id")
+        if not uid or uid == user["user_id"]: continue
+        await _notify(uid, user["org_id"], "mention",
+                      {"task_id": task_id, "task_title": task.get("title","")},
+                      f"{doc['author_name']} mencionou você em «{task.get('title','')}»")
+        mu = await db.users.find_one({"user_id": uid}, {"_id": 0})
+        if mu and mu.get("email"):
+            html = f"""
+            <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;padding:24px;border:1px solid #eee;border-radius:8px">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:#888">Você foi mencionado</div>
+              <h2 style="margin:12px 0 4px 0">{task.get('title','')}</h2>
+              <p style="color:#333"><b>{doc['author_name']}</b> escreveu:</p>
+              <blockquote style="border-left:3px solid #0A0A14;padding:8px 12px;color:#333;background:#F5F1EA">{doc['body']}</blockquote>
+              <p style="margin-top:20px"><a href="https://pme-all-in-one.preview.emergentagent.com/app/projetos" style="background:#0A0A14;color:#F5F1EA;padding:10px 18px;border-radius:6px;text-decoration:none">Abrir tarefa</a></p>
+            </div>"""
+            await send_email(mu["email"], f"Você foi mencionado em «{task.get('title','')}» • Prisma", html)
+    doc.pop("_id", None)
+    return doc
+
+@api.delete("/tasks/{task_id}/comments/{comment_id}")
+async def delete_comment(task_id: str, comment_id: str, user: dict = Depends(current_user)):
+    c = await db.comments.find_one({"comment_id": comment_id, "task_id": task_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not c: raise HTTPException(404, "Comentário não encontrado")
+    if c["author_id"] != user["user_id"] and user.get("role") not in ("owner", "admin"):
+        raise HTTPException(403, "Sem permissão")
+    await db.comments.delete_one({"comment_id": comment_id, "org_id": user["org_id"]})
+    return {"ok": True}
+
+@api.get("/notifications")
+async def list_notifications(user: dict = Depends(current_user)):
+    items = await db.notifications.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    unread = await db.notifications.count_documents({"user_id": user["user_id"], "read": False})
+    return {"items": items, "unread": unread}
+
+@api.post("/notifications/{notif_id}/read")
+async def mark_read(notif_id: str, user: dict = Depends(current_user)):
+    await db.notifications.update_one({"notif_id": notif_id, "user_id": user["user_id"]}, {"$set": {"read": True}})
+    return {"ok": True}
+
+@api.post("/notifications/read-all")
+async def mark_all_read(user: dict = Depends(current_user)):
+    await db.notifications.update_many({"user_id": user["user_id"], "read": False}, {"$set": {"read": True}})
+    return {"ok": True}
+
+@api.get("/tasks/all")
+async def all_tasks(user: dict = Depends(current_user)):
+    """Lista todas as tarefas da org (para views Lista/Calendário/Gantt em Projetos)."""
+    items = await db.tasks.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(2000)
+    return {"items": items}
+
+
 app.include_router(api)
 
 app.add_middleware(

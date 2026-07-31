@@ -4,10 +4,12 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Users2, MessageCircle, Kanban, Wallet,
   FileText, Zap, Sparkles, LogOut, Search, Command, PanelLeftClose, PanelLeftOpen,
-  ClipboardList,
+  ClipboardList, Bell,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import api from "@/lib/api";
 import Copilot from "@/components/Copilot";
 import CommandPalette from "@/components/CommandPalette";
 
@@ -164,6 +166,7 @@ export default function AppShell() {
               <Command className="h-3 w-3" /> K
             </kbd>
           </button>
+          <NotificationBell onOpenTask={(taskId) => navigate(`/app/projetos?task=${taskId}`)} />
           <Button
             data-testid="open-copilot-top"
             variant="outline"
@@ -183,5 +186,65 @@ export default function AppShell() {
       <Copilot open={copilotOpen} onOpenChange={setCopilotOpen} moduleName={activeModule} />
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onOpenCopilot={() => setCopilotOpen(true)} />
     </div>
+  );
+}
+
+function NotificationBell({ onOpenTask }) {
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState([]);
+  const [unread, setUnread] = useState(0);
+
+  const load = async () => {
+    try {
+      const r = await api.get("/notifications");
+      setItems(r.data.items); setUnread(r.data.unread);
+    } catch { /* ignore */ }
+  };
+  useEffect(() => { load(); const id = setInterval(load, 20000); return () => clearInterval(id); }, []);
+
+  const readOne = async (n) => {
+    try { await api.post(`/notifications/${n.notif_id}/read`); } catch { }
+    if (n.target?.task_id) onOpenTask?.(n.target.task_id);
+    setOpen(false); load();
+  };
+  const readAll = async () => { try { await api.post("/notifications/read-all"); load(); } catch { } };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          data-testid="notif-bell"
+          className="relative h-9 w-9 rounded-md border border-black/10 hover:bg-black/5 flex items-center justify-center"
+          aria-label="Notificações"
+        >
+          <Bell className="h-4 w-4" />
+          {unread > 0 && (
+            <span data-testid="notif-badge" className="absolute -top-1 -right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-[10px] text-white flex items-center justify-center font-mono">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-0" align="end" data-testid="notif-popover">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
+          <div className="text-sm font-medium">Notificações</div>
+          {unread > 0 && <button onClick={readAll} className="text-xs text-black/50 hover:text-black" data-testid="notif-read-all">Marcar todas</button>}
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {items.length === 0 && <div className="p-8 text-center text-xs text-black/40">Sem notificações</div>}
+          {items.map((n) => (
+            <button
+              key={n.notif_id}
+              onClick={() => readOne(n)}
+              data-testid={`notif-item-${n.notif_id}`}
+              className={`w-full text-left px-4 py-3 border-b border-black/5 hover:bg-black/[0.03] ${!n.read ? "bg-blue-50/40" : ""}`}
+            >
+              <div className="text-sm text-black/80">{n.body}</div>
+              <div className="text-[10px] text-black/40 mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
+            </button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }

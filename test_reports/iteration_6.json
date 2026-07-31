@@ -1,0 +1,26 @@
+{
+  "summary": "Prisma v1.4 — Project Views (Lista/Calendário/Gantt) + Comments/@mentions/Notifications testados de ponta a ponta. Backend: 10/10 testes pytest passando (GET /api/tasks/all, list/create/delete comments com regra de autor, mentions criando notificações no DB, self-mention não notifica, GET/POST /api/notifications e read-all). Frontend: view switcher com 4 botões funcional (kanban/lista/calendário/gantt), calendário navega com cal-prev/cal-next, gantt exibe estado vazio corretamente, sino de notificações abre popover, modal de tarefa exibe seção Comentários com sugestão de @menção, seleção insere @Nome, envio persiste e menção aparece destacada em azul. Toast 'Comentário enviado — 1 mencionado(s)' confirma integração.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_6_comments_notifs.py",
+    "/app/test_reports/pytest/iter6.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py está em 1981 linhas — recomenda-se dividir em módulos (auth, projects/tasks, comments/notifications, copilot, payments) em iteração futura.",
+    "Notification polling a cada 20s no client — considerar SSE/WebSocket para push real-time e reduzir carga.",
+    "Endpoint /api/tasks/all retorna até 2000 tarefas sem paginação — adicionar limit/skip antes que orgs grandes cresçam.",
+    "delete_comment permite owner/admin — regra ok, mas não há endpoint para editar comentário (PATCH) caso o usuário queira corrigir."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration_6_comments_notifs.py (novo)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "Owner: session_token=test_session_1785228939986; Secundário (mesma org): sess_ana_2 (user_id test-user-2). Ambos criados no MongoDB.",
+  "seed_data_creation": "Criado projeto 'TEST_prj_iter6' com tarefa 'TEST_task_iter6' (due 2026-02-15) via fixtures pytest. Vários comentários TEST_* podem permanecer no DB da tarefa.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Endpoints novos: GET /api/tasks/all, GET/POST/DELETE /api/tasks/{id}/comments, GET /api/notifications, POST /api/notifications/{id}/read, POST /api/notifications/read-all. Frontend testids relevantes: view-{kanban|lista|calendario|gantt}, list-view, calendar-view, cal-prev, cal-next, cal-task-<id>, gantt-view, gantt-empty, gantt-bar-<id>, notif-bell, notif-badge, notif-popover, notif-item-<id>, notif-read-all, task-detail-modal, comments-list, comment-<id>, del-comment-<id>, comment-input, mention-suggest, mention-<user_id>, send-comment. Auth via cookie session_token no domínio pme-all-in-one.preview.emergentagent.com (Bearer também aceito).",
+  "rca of the issue": "N/A — nenhum bug encontrado nesta iteração."
+}
