@@ -3,49 +3,46 @@
 ## Problema
 Plataforma modular para PMEs brasileiras. Une CRM, WhatsApp, Projetos, Financeiro, Documentos, Ordem de Serviço, Automações, Copiloto IA e Portal do Cliente com pagamento PIX.
 
-## Módulos (v1.3 — 2026-02-28)
+## Módulos (v1.4 — 2026-02-28)
 - **Copiloto IA operacional** — Claude Sonnet 4.5 streaming + ações (criar tarefa, gerar proposta, gerar relatório).
 - **CRM** — Kanban de leads.
-- **Ordem de Serviço** — Do orçamento à entrega. Custom fields, recorrência (semanal/mensal/trimestral), templates reutilizáveis, envio por e-mail + WhatsApp, portal público, assinatura eletrônica com hash SHA-256, PDF do comprovante, cobrança PIX/cartão.
-- **Portal do Cliente (público, sem login)** — `/os/publica/{token}`. Cliente vê a proposta, aceita/assina, paga PIX. Lista outras propostas do mesmo e-mail.
-- **WhatsApp** — Inbox + Twilio (send/webhook) com fallback modo simulação.
-- **Projetos** — Kanban de tarefas + **time tracker** (start/stop/log manual) + **custom fields** por tarefa.
-- **Financeiro** — Fluxo de caixa, status vencida dispara automação.
-- **Documentos** — Upload real + guarda propostas/relatórios do Copiloto.
+- **Ordem de Serviço** — Custom fields, recorrência, templates, envio automático (email + WhatsApp), portal público, assinatura eletrônica com hash, PDF de comprovante, cobrança PIX/cartão.
+- **Portal do Cliente (público)** — `/os/publica/{token}`.
+- **WhatsApp** — Inbox + Twilio.
+- **Projetos** — **4 views**: Kanban / Lista / Calendário / Gantt. Time tracker por tarefa. Custom fields. **Comentários com @menções** + notificações in-app e por e-mail.
+- **Notificações** — Sino no header com contador ao vivo (polling 20s). Marca todas como lidas.
+- **Financeiro** — Fluxo de caixa.
+- **Documentos** — Upload + propostas/relatórios do Copiloto.
 - **Automações** — Motor real (novo_lead, fatura_vencida, proposta_enviada, nova_conversa_wa).
 - **Equipe** — Convites por e-mail, papéis.
 - **Dashboards** — KPIs + gráficos.
-- **Landing** — Checkout Stripe direto (Starter/Growth/Business + Founder Deal) com contador ao vivo.
+- **Landing** — Checkout Stripe direto (Starter/Growth/Business + Founder Deal).
 
 ## Arquitetura
-- Backend FastAPI (`/app/backend/server.py`, ~1900 linhas) — MongoDB. Rotas `/api/*` + `/api/public/*`.
-- Frontend React 19 + Tailwind + Shadcn + Recharts + framer-motion.
-- Auth: Emergent Google Auth (cookie httpOnly + Bearer).
-- IA: `emergentintegrations` (Claude Sonnet 4.6) — texto e ações.
-- Email: Resend (Emergent-managed).
-- WhatsApp: Twilio (`+19788384904`).
-- Pagamentos: Stripe Flow A (sandbox claimable). PIX tentado com fallback automático para cartão.
-- PDF: `reportlab` para comprovante de assinatura.
-- Assinatura eletrônica: SHA-256 (nome + e-mail + IP + timestamp + os_id) — MP 2.200-2 / Lei 14.063/2020.
-- Multi-tenant: `org_id` em toda query.
+- Backend FastAPI (~2000 linhas). Coleções: users, orgs, leads, whatsapp_msgs, projects, tasks, finance, documents, automations, team_invites, ordem_servico, os_templates, payment_transactions, copilot_reports, notifications, comments, user_sessions.
+- Auth: Emergent Google Auth.
+- IA: `emergentintegrations` (Claude Sonnet 4.6).
+- Email: Resend (Emergent-managed) — inclui e-mail de menção.
+- WhatsApp: Twilio.
+- Pagamentos: Stripe (Flow A sandbox). PIX com fallback para cartão.
+- Assinatura: SHA-256 + IP + timestamp (Lei 14.063/2020). PDF via reportlab.
 
-## Estado (2026-02-28)
-- Backend endpoints: 30+ rotas, todas com pytest cobrindo casos principais.
-- Frontend: OS pública em produção, cronômetro nas tarefas, custom fields em OS e tarefas, templates, recorrência automática.
-- Stripe catalog: 4 produtos × 7 preços BRL provisionados.
+## Endpoints novos (v1.4)
+- `GET /api/tasks/all` — lista TODAS as tarefas da org (para views Lista/Calendário/Gantt).
+- `GET/POST/DELETE /api/tasks/{id}/comments` — comentários com @menções.
+- `GET /api/notifications`, `POST /api/notifications/{id}/read`, `POST /api/notifications/read-all`.
+- @menções geram notificação in-app + e-mail para o mencionado.
 
 ## Backlog priorizado
 ### P1
-- WhatsApp: ativar número Twilio (Sandbox `+14155238886` ou Sender aprovado) → hoje envia por WhatsApp cai em erro gracioso.
-- Rate-limit por org no motor de automações.
-- Notificar dono por WhatsApp (não só e-mail) quando cliente assina/paga.
+- Ativar WhatsApp Twilio de verdade.
+- Notificar dono no WhatsApp quando cliente assina/paga.
+- Notificação em tempo real via WebSocket (hoje polling 20s).
 
 ### P2
-- Domínio `prisma.com.br`.
+- Domínio prisma.com.br.
 - Split de `server.py` em módulos.
 - Modo escuro.
-- Copilot: tool-calling nativo (function-calling) em vez de heurística no frontend.
-- Comentários com @menções nas tarefas.
+- Copilot tool-calling nativo.
 - Dependências entre tarefas (aguarda X).
-- Gantt/Timeline view em Projetos.
-- Portal cliente: autenticação por magic-link para ver TODAS as OS (hoje já lista as do mesmo e-mail).
+- Copiloto no WhatsApp do cliente (esteira comercial autônoma).

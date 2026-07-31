@@ -62,7 +62,7 @@ export default function Projetos() {
     if (!active && r.data.items.length) setActive(r.data.items[0]);
   };
   const loadTasks = async (id) => { const r = await api.get(`/projects/${id}/tasks`); setTasks(r.data.items); };
-  const loadMembers = async () => { try { const r = await api.get("/team/members"); setMembers(r.data.members || []); } catch { } };
+  const loadMembers = async () => { try { const r = await api.get("/team/members"); setMembers(r.data.members || []); } catch { /* noop */ } };
 
   useEffect(() => { loadProjects(); loadMembers(); }, []);
   useEffect(() => { if (active) loadTasks(active.project_id); }, [active]);
@@ -421,7 +421,7 @@ function TaskDetail({ task, members, onClose, onSaved }) {
   const textareaRef = useRef(null);
 
   const loadComments = async () => {
-    try { const r = await api.get(`/tasks/${task.task_id}/comments`); setComments(r.data.items); } catch { }
+    try { const r = await api.get(`/tasks/${task.task_id}/comments`); setComments(r.data.items); } catch { /* noop */ }
   };
   useEffect(() => { loadComments(); }, [task.task_id]);
 

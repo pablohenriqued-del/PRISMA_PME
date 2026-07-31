@@ -203,11 +203,11 @@ function NotificationBell({ onOpenTask }) {
   useEffect(() => { load(); const id = setInterval(load, 20000); return () => clearInterval(id); }, []);
 
   const readOne = async (n) => {
-    try { await api.post(`/notifications/${n.notif_id}/read`); } catch { }
+    try { await api.post(`/notifications/${n.notif_id}/read`); } catch { /* noop */ }
     if (n.target?.task_id) onOpenTask?.(n.target.task_id);
     setOpen(false); load();
   };
-  const readAll = async () => { try { await api.post("/notifications/read-all"); load(); } catch { } };
+  const readAll = async () => { try { await api.post("/notifications/read-all"); load(); } catch { /* noop */ } };
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
