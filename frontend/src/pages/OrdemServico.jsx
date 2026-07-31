@@ -124,10 +124,18 @@ export default function OrdemServico() {
     setSendingId(o.os_id);
     try {
       const r = await api.post(`/os/${o.os_id}/send`, { channels: ["email", "whatsapp"], origin_url: window.location.origin });
-      const parts = [];
-      if (r.data.email?.status === "sent") parts.push("e-mail");
-      if (r.data.whatsapp?.status === "sent") parts.push("WhatsApp");
-      toast.success(parts.length ? `Enviado por ${parts.join(" + ")}` : "Link do portal atualizado");
+      const emailOk = r.data.email?.status === "sent";
+      const waOk = r.data.whatsapp?.status === "sent";
+      const waSkipped = r.data.whatsapp?.status === "skipped" || !o.client_phone;
+      if (emailOk && waOk) toast.success("Enviado por e-mail + WhatsApp");
+      else if (emailOk && !waOk && !waSkipped) {
+        toast.warning("E-mail enviado. WhatsApp falhou", {
+          description: r.data.whatsapp?.hint || r.data.whatsapp?.detail || "Erro desconhecido no Twilio.",
+          duration: 10000,
+        });
+      } else if (emailOk) toast.success("E-mail enviado");
+      else if (waOk) toast.success("WhatsApp enviado");
+      else toast.warning("Nada foi enviado", { description: r.data.whatsapp?.hint || r.data.email?.reason || "Verifique os canais do cliente." });
       load();
     } catch { toast.error("Falha ao enviar"); }
     finally { setSendingId(null); }

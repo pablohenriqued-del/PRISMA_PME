@@ -248,8 +248,30 @@ async def send_whatsapp(to_phone: str, body: str) -> Dict[str, Any]:
         msg = twilio_client.messages.create(from_=TWILIO_FROM, to=wa_num(to_phone), body=body)
         return {"status": "sent", "sid": msg.sid, "twilio_status": msg.status}
     except Exception as e:
-        logging.warning(f"twilio send failed: {e}")
-        return {"status": "error", "detail": str(e)[:200]}
+        raw = str(e)
+        code = None
+        for c in ("63007", "63016", "63018", "21211", "21606", "21610"):
+            if c in raw:
+                code = c
+                break
+        # Friendly hints for common cases
+        sandbox_join = os.environ.get("TWILIO_SANDBOX_JOIN", "join <sua-palavra>")
+        sandbox_num = TWILIO_FROM.replace("whatsapp:", "")
+        hint = None
+        if code == "63007":
+            hint = (
+                f"Número remetente {TWILIO_FROM} não está habilitado como remetente WhatsApp na sua conta Twilio. "
+                f"Use o Sandbox oficial ({sandbox_num}) ou aprove um Sender no Console Twilio."
+            )
+        elif code in ("63016", "63018"):
+            hint = (
+                f"O destinatário ainda não entrou no Sandbox do Twilio. "
+                f"Peça ao cliente para enviar '{sandbox_join}' via WhatsApp para {sandbox_num} antes de receber mensagens."
+            )
+        elif code in ("21211", "21606", "21610"):
+            hint = "Número do destinatário inválido ou bloqueado. Confirme o formato +55DDDNNNNNNNN."
+        logging.warning(f"twilio send failed [{code or 'unknown'}]: {raw[:180]}")
+        return {"status": "error", "code": code, "detail": raw[:200], "hint": hint}
 
 # ----------------- Auth (Emergent Google) -----------------
 class SessionRequest(BaseModel):
