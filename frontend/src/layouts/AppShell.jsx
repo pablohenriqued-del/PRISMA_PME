@@ -4,6 +4,7 @@ import { useAuth } from "@/context/AuthContext";
 import {
   LayoutDashboard, Users2, MessageCircle, Kanban, Wallet,
   FileText, Zap, Sparkles, LogOut, Search, Command, PanelLeftClose, PanelLeftOpen,
+  ClipboardList,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { UserCog } from "lucide-react";
 const NAV = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/app/crm", label: "CRM", icon: Users2 },
+  { to: "/app/os", label: "Ordem de Serviço", icon: ClipboardList },
   { to: "/app/whatsapp", label: "WhatsApp", icon: MessageCircle },
   { to: "/app/projetos", label: "Projetos", icon: Kanban },
   { to: "/app/financeiro", label: "Financeiro", icon: Wallet },

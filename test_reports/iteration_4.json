@@ -1,0 +1,40 @@
+{
+  "summary": "Full backend + frontend testing for iteration 4 (Ordem de Serviço, Stripe/PIX payments, Copilot ops). All 14 backend pytest cases PASS (OS CRUD, OS from-lead, OS to-project idempotent, checkout guest for starter subscription + founder-deal PIX one-time with graceful fallback, os-checkout auth-guarded, payments/status public, founder-deal counter, copilot create-task/generate-proposal/generate-report incl. persistence to /api/documents, auth guards). Frontend flows also mostly pass: Founder counter renders from /api/public/founder-deal (100 vagas restantes, not hardcoded 57), founder-cta redirects to checkout.stripe.com, Free plan CTA navigates to /login, /app/os page renders with nav item 'Ordem de Serviço', manual OS creation + total calc works, quick-fromlead creates OS, to-project button works, pay-os-<id> redirects to Stripe, Copilot quick actions (task/proposal/report) open dialogs, submit, and render results (proposal + report markdown + copy button visible). PaymentSuccess with invalid session_id shows friendly 'Ops!' error (no crash) and PaymentCancel renders correctly. FOUND ONE HIGH PRIORITY UI BUG: plan-cta-<starter|growth|business> buttons wire onClick to primaryCta (navigate to /login) instead of clickPlanCta(p) — see Landing.jsx line 890.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Landing.jsx pricing plans",
+        "issue": "All paid plan CTA buttons (Starter/Growth/Business) navigate to /login instead of starting Stripe Checkout. The onClick handler is hardcoded to `primaryCta` at line 890 instead of `() => clickPlanCta(p)`. The `clickPlanCta` function is defined but never called. Only 'Free' plan should route to /login; paid plans should call startCheckout with lookup_monthly/yearly + trial_days:30. Founder deal button works correctly because it uses `clickFounderCta`.",
+        "selector": "[data-testid=\"plan-cta-starter\"], [data-testid=\"plan-cta-growth\"], [data-testid=\"plan-cta-business\"]",
+        "priority": "HIGH"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Copilot dialogs", "issues": ["Radix warns: DialogContent missing DialogTitle/Description (accessibility). Wrap titles in VisuallyHidden or add explicit DialogTitle/Description for cop-quick-task, proposal, report dialogs."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration_4_os_payments_copilot.py",
+    "/app/test_reports/pytest/iter4_results.xml"
+  ],
+  "action_items": [
+    "Fix Landing.jsx line ~890: change `onClick={primaryCta}` to `onClick={() => clickPlanCta(p)}` so paid plan CTAs start Stripe checkout with trial_days=30. This blocks the entire pricing→checkout funnel for Starter/Growth/Business.",
+    "(Minor) Add DialogTitle/Description to Copilot task/proposal/report dialogs for a11y compliance."
+  ],
+  "critical_code_review_comments": [
+    "Landing.jsx clickPlanCta is dead code because the button's onClick uses primaryCta directly. This is a wiring bug — high impact.",
+    "server.py is now 1517 lines; consider splitting into modules (crm.py, os.py, payments.py, copilot.py) for maintainability (>700 line threshold).",
+    "Copilot dialogs missing DialogTitle/Description — will fail WCAG audits (screen reader users).",
+    "Payment /api/payments/status endpoint is public — anyone with a session_id can poll. Amount + lookup_key are leaked. Consider requiring the transaction to belong to the caller when authenticated, or restrict fields for anonymous callers."
+  ],
+  "updated_files": ["/app/backend/tests/test_iteration_4_os_payments_copilot.py"],
+  "success_rate": {"backend": "100% (14/14)", "frontend": "~92% (12/13 flows; plan-cta paid plans blocked by wiring bug)"},
+  "test_credentials": "session_token=test_session_1785228939986 (cookie or Bearer). User test.user@example.com, Org org-1785228939986. Loaded from /app/memory/test_credentials.md.",
+  "seed_data_creation": "Test-created OS docs and copilot tasks/documents were prefixed with TEST_ where possible. OS records were deleted after test. Copilot-generated proposals/reports remain in DB (documents+copilot_reports) — safe for org isolation.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All backend endpoints (OS, payments, copilot ops, founder-deal) fully functional and covered by pytest at /app/backend/tests/test_iteration_4_os_payments_copilot.py (14 tests, all pass in ~45s). Only remaining bug is a one-line frontend wiring issue on the pricing section — after fix, retest plan-cta-{starter,growth,business} for Stripe redirect. Copilot quick actions confirmed to work end-to-end including AI generation (~20-25s wait). PIX on Stripe sandbox: for founder-deal, pix_enabled came back true in this environment.",
+  "rca of the issue": "Landing.jsx renders each pricing plan card and defines a `clickPlanCta(p)` helper at line 527 that correctly branches (free → /login; paid → startCheckout(lookup, trial_days:30)). However, the button element on line 889-901 wires `onClick={primaryCta}` directly. `primaryCta` unconditionally navigates to /login (or /app if authenticated). Consequences: (a) Free plan works by coincidence; (b) all paid plan CTAs bypass Stripe entirely. Repro: open landing (guest), click any paid plan-cta → observe navigation to /login and NO network call to /api/payments/checkout (verified by request interception in Playwright). Fix: replace `onClick={primaryCta}` with `onClick={() => clickPlanCta(p)}` on line 890 of /app/frontend/src/pages/Landing.jsx."
+}

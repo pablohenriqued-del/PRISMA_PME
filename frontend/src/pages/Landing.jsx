@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
+import api from "@/lib/api";
 import {
   ArrowUpRight, Check, Sparkles, MessageCircle, Users2, Wallet, Kanban,
   FileText, Zap, UserCog, Play, Volume2, VolumeX,
@@ -439,6 +440,8 @@ const PLANS = [
     cta: "Começar grátis",
     highlight: false,
     small: true,
+    lookup_monthly: null,
+    lookup_yearly: null,
   },
   {
     key: "starter",
@@ -448,6 +451,8 @@ const PLANS = [
     features: ["1 usuário", "CRM ilimitado", "WhatsApp mock", "Copiloto 500 msgs/mês", "Documentos 2 GB"],
     cta: "Testar 30 dias",
     highlight: false,
+    lookup_monthly: "prisma_starter_monthly",
+    lookup_yearly: "prisma_starter_yearly",
   },
   {
     key: "growth",
@@ -457,6 +462,8 @@ const PLANS = [
     features: ["Até 5 usuários", "WhatsApp real (Twilio)", "Copiloto ilimitado", "Automações ilimitadas", "Documentos 50 GB"],
     cta: "Testar 30 dias",
     highlight: true,
+    lookup_monthly: "prisma_growth_monthly",
+    lookup_yearly: "prisma_growth_yearly",
   },
   {
     key: "business",
@@ -464,8 +471,10 @@ const PLANS = [
     monthly: 2997,
     tag: "Times crescendo",
     features: ["Usuários ilimitados", "SLA 4h de suporte", "Onboarding assistido", "API pública", "Documentos 500 GB"],
-    cta: "Falar com vendas",
+    cta: "Assinar Business",
     highlight: false,
+    lookup_monthly: "prisma_business_monthly",
+    lookup_yearly: "prisma_business_yearly",
   },
 ];
 
@@ -478,11 +487,19 @@ export default function Landing() {
   const [scrolled, setScrolled] = useState(false);
   const [tick, setTick] = useState(0);
   const [billing, setBilling] = useState("monthly");
+  const [founder, setFounder] = useState({ cap: 100, claimed: 0, remaining: 100 });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener("scroll", onScroll);
     const t = setInterval(() => setTick((n) => (n + 1) % MODULES.length), 1400);
+    // Live founder deal counter
+    (async () => {
+      try {
+        const r = await api.get("/public/founder-deal");
+        setFounder(r.data);
+      } catch { /* ignore */ }
+    })();
     return () => { window.removeEventListener("scroll", onScroll); clearInterval(t); };
   }, []);
 
@@ -490,6 +507,34 @@ export default function Landing() {
     if (user) navigate("/app");
     else navigate("/login");
   };
+
+  const startCheckout = async (lookup_key, opts = {}) => {
+    try {
+      const r = await api.post("/payments/checkout", {
+        lookup_key,
+        origin_url: window.location.origin,
+        trial_days: opts.trial_days || 0,
+      });
+      window.location.href = r.data.checkout_url;
+    } catch (e) {
+      const msg = e?.response?.data?.detail || "Falha ao iniciar checkout";
+      // Fallback to login/dashboard so user still moves forward
+      alert(msg);
+      primaryCta();
+    }
+  };
+
+  const clickPlanCta = (p) => {
+    if (!p.lookup_monthly) { primaryCta(); return; }
+    const key = billing === "annual" ? p.lookup_yearly : p.lookup_monthly;
+    startCheckout(key, { trial_days: 30 });
+  };
+
+  const clickFounderCta = () => {
+    startCheckout("prisma_founder_deal");
+  };
+
+  const founderPct = Math.min(100, Math.max(0, Math.round((founder.claimed / (founder.cap || 100)) * 100)));
 
   return (
     <div className="min-h-screen bg-[#F5F1EA] text-[#0A0A14]" data-testid="landing-page">
@@ -874,21 +919,21 @@ export default function Landing() {
                 <div className="text-sm text-black/60">pagamento único</div>
               </div>
               <p className="mt-3 text-sm text-black/65 leading-relaxed max-w-2xl">
-                <b>3 anos de Growth</b> incluídos, para os primeiros <b>100 fundadores</b>. Trave o preço agora — o plano vira Growth normal depois de 36 meses.
+                <b>3 anos de Growth</b> incluídos, para os primeiros <b>{founder.cap}</b> fundadores. Trave o preço agora — o plano vira Growth normal depois de 36 meses.
               </p>
               <div className="mt-3 flex items-center gap-2 text-[11px] text-black/50">
                 <div className="h-1 w-32 rounded-full bg-black/10 overflow-hidden">
-                  <div className="h-full bg-[#0A0A14]" style={{ width: "43%" }} />
+                  <div className="h-full bg-[#0A0A14]" style={{ width: `${founderPct}%` }} />
                 </div>
-                <span className="font-mono" data-testid="founder-remaining">57 vagas restantes</span>
+                <span className="font-mono" data-testid="founder-remaining">{founder.remaining} vagas restantes</span>
               </div>
             </div>
             <button
-              onClick={primaryCta}
+              onClick={clickFounderCta}
               data-testid="founder-cta"
               className="shrink-0 h-11 px-6 rounded-md bg-[#0A0A14] text-[#F5F1EA] text-sm hover:bg-black transition-colors whitespace-nowrap"
             >
-              Reservar minha vaga
+              Reservar minha vaga (PIX)
             </button>
           </div>
         </div>

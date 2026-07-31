@@ -15,10 +15,11 @@ import Documentos from "@/pages/Documentos";
 import Automacoes from "@/pages/Automacoes";
 import Team from "@/pages/Team";
 import Landing from "@/pages/Landing";
+import OrdemServico from "@/pages/OrdemServico";
+import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 
 function AppRouter() {
   const location = useLocation();
-  // Handle session_id in URL fragment synchronously (before ProtectedRoute)
   if (location.hash?.includes("session_id=")) {
     return <AuthCallback />;
   }
@@ -26,9 +27,12 @@ function AppRouter() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/payment/success" element={<PaymentSuccess />} />
+      <Route path="/payment/cancel" element={<PaymentCancel />} />
       <Route path="/app" element={<AppShell />}>
         <Route index element={<Dashboard />} />
         <Route path="crm" element={<CRM />} />
+        <Route path="os" element={<OrdemServico />} />
         <Route path="whatsapp" element={<WhatsAppInbox />} />
         <Route path="projetos" element={<Projetos />} />
         <Route path="financeiro" element={<Financeiro />} />

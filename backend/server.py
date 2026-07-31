@@ -22,6 +22,7 @@ from datetime import datetime, timezone, timedelta
 
 from twilio.rest import Client as TwilioClient
 from twilio.twiml.messaging_response import MessagingResponse
+import stripe
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -48,6 +49,82 @@ EMAIL_BASE_URL = "https://integrations.emergentagent.com"
 STORAGE_URL = "https://integrations.emergentagent.com/objstore/api/v1/storage"
 APP_NAME = os.environ.get('APP_NAME', 'nucleo-ia')
 _storage_key: Optional[str] = None
+
+# Stripe (Flow A — Emergent claimable sandbox)
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY') or 'sk_test_emergent'
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', '')
+
+# Founder deal cap
+FOUNDER_CAP = int(os.environ.get('FOUNDER_CAP', '100'))
+
+# Catalog for Prisma (BRL). Paid plans are subscriptions.
+# Founder Deal and Ordem de Serviço are one-time payments and support PIX + card.
+STRIPE_CATALOG = [
+    {
+        "emergent_product_id": "prisma_starter", "name": "Prisma Starter",
+        "tax_code": "txcd_10103001",
+        "prices": [
+            {"lookup_key": "prisma_starter_monthly", "amount": 29700, "currency": "brl", "interval": "month"},
+            {"lookup_key": "prisma_starter_yearly",  "amount": 297000, "currency": "brl", "interval": "year"},
+        ],
+    },
+    {
+        "emergent_product_id": "prisma_growth", "name": "Prisma Growth",
+        "tax_code": "txcd_10103001",
+        "prices": [
+            {"lookup_key": "prisma_growth_monthly", "amount": 89700, "currency": "brl", "interval": "month"},
+            {"lookup_key": "prisma_growth_yearly",  "amount": 897000, "currency": "brl", "interval": "year"},
+        ],
+    },
+    {
+        "emergent_product_id": "prisma_business", "name": "Prisma Business",
+        "tax_code": "txcd_10103001",
+        "prices": [
+            {"lookup_key": "prisma_business_monthly", "amount": 299700, "currency": "brl", "interval": "month"},
+            {"lookup_key": "prisma_business_yearly",  "amount": 2997000, "currency": "brl", "interval": "year"},
+        ],
+    },
+    {
+        "emergent_product_id": "prisma_founder_deal",
+        "name": "Prisma Founder Deal (3 anos de Growth)",
+        "tax_code": "txcd_10103001",
+        "prices": [
+            {"lookup_key": "prisma_founder_deal", "amount": 499700, "currency": "brl"},
+        ],
+    },
+]
+
+def ensure_stripe_catalog():
+    try:
+        for entry in STRIPE_CATALOG:
+            product = None
+            for p in stripe.Product.list(active=True, limit=100).auto_paging_iter():
+                if p.to_dict().get("metadata", {}).get("emergent_product_id") == entry["emergent_product_id"]:
+                    product = p
+                    break
+            if not product:
+                product = stripe.Product.create(
+                    name=entry["name"], tax_code=entry.get("tax_code"),
+                    metadata={"managed_by": "emergent", "emergent_product_id": entry["emergent_product_id"]},
+                )
+            for pp in entry["prices"]:
+                existing = stripe.Price.list(lookup_keys=[pp["lookup_key"]], active=True, limit=1).data
+                if existing and (existing[0].unit_amount != pp["amount"] or existing[0].currency != pp["currency"]):
+                    stripe.Price.modify(existing[0].id, active=False)
+                    existing = []
+                if not existing:
+                    kwargs = dict(
+                        product=product.id, unit_amount=pp["amount"], currency=pp["currency"],
+                        lookup_key=pp["lookup_key"], transfer_lookup_key=True,
+                    )
+                    if pp.get("interval"):
+                        kwargs["recurring"] = {"interval": pp["interval"]}
+                    stripe.Price.create(**kwargs)
+        logging.info("Stripe catalog OK")
+    except Exception as e:
+        logging.warning(f"stripe catalog setup failed: {e}")
+
 
 app = FastAPI(title="Prisma API")
 api = APIRouter(prefix="/api")
@@ -899,6 +976,512 @@ async def copilot_history(session_id: str, user: dict = Depends(current_user)):
     items = await db.copilot_messages.find({"user_id": user["user_id"], "session_id": session_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
     return {"items": items}
 
+# ----------------- Ordem de Serviço -----------------
+OS_STATUSES = ["orcamento", "aprovada", "em_execucao", "concluida", "cancelada"]
+
+class OSItem(BaseModel):
+    description: str
+    quantity: float = 1
+    unit_price: float = 0
+
+class OSIn(BaseModel):
+    title: str
+    client_name: str
+    client_email: str = ""
+    client_phone: str = ""
+    lead_id: Optional[str] = None
+    project_id: Optional[str] = None
+    items: List[OSItem] = []
+    notes: str = ""
+    due_date: str = ""
+    status: str = "orcamento"
+
+def _os_total(items: List[Dict[str, Any]]) -> float:
+    return round(sum((it.get("quantity", 1) or 1) * (it.get("unit_price", 0) or 0) for it in items), 2)
+
+@api.get("/os")
+async def list_os(user: dict = Depends(current_user)):
+    items = await db.ordem_servico.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(500)
+    return {"items": items}
+
+@api.post("/os")
+async def create_os(body: OSIn, user: dict = Depends(current_user)):
+    doc = body.model_dump()
+    doc["items"] = [dict(i) for i in doc["items"]]
+    doc.update({
+        "os_id": gen_id("os"),
+        "org_id": user["org_id"],
+        "created_at": iso(now_utc()),
+        "total": _os_total(doc["items"]),
+        "created_by": user["user_id"],
+    })
+    await db.ordem_servico.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+class OSPatch(BaseModel):
+    title: Optional[str] = None
+    client_name: Optional[str] = None
+    client_email: Optional[str] = None
+    client_phone: Optional[str] = None
+    lead_id: Optional[str] = None
+    project_id: Optional[str] = None
+    items: Optional[List[OSItem]] = None
+    notes: Optional[str] = None
+    due_date: Optional[str] = None
+    status: Optional[str] = None
+
+@api.patch("/os/{os_id}")
+async def update_os(os_id: str, body: OSPatch, user: dict = Depends(current_user)):
+    upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "items" in upd:
+        upd["items"] = [dict(i) for i in upd["items"]]
+        upd["total"] = _os_total(upd["items"])
+    if upd:
+        await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]}, {"$set": upd})
+    return {"ok": True}
+
+@api.delete("/os/{os_id}")
+async def delete_os(os_id: str, user: dict = Depends(current_user)):
+    await db.ordem_servico.delete_one({"os_id": os_id, "org_id": user["org_id"]})
+    return {"ok": True}
+
+class OSFromLead(BaseModel):
+    lead_id: str
+    title: Optional[str] = None
+    items: List[OSItem] = []
+
+@api.post("/os/from-lead")
+async def os_from_lead(body: OSFromLead, user: dict = Depends(current_user)):
+    lead = await db.leads.find_one({"lead_id": body.lead_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead não encontrado")
+    items = [dict(i) for i in body.items] or [{
+        "description": f"Serviço para {lead.get('company') or lead['name']}",
+        "quantity": 1,
+        "unit_price": float(lead.get("value") or 0),
+    }]
+    doc = {
+        "os_id": gen_id("os"),
+        "org_id": user["org_id"],
+        "title": body.title or f"OS — {lead['name']}",
+        "client_name": lead["name"],
+        "client_email": lead.get("email", ""),
+        "client_phone": lead.get("phone", ""),
+        "lead_id": lead["lead_id"],
+        "project_id": None,
+        "items": items,
+        "total": _os_total(items),
+        "notes": "",
+        "due_date": "",
+        "status": "orcamento",
+        "created_at": iso(now_utc()),
+        "created_by": user["user_id"],
+    }
+    await db.ordem_servico.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+@api.post("/os/{os_id}/to-project")
+async def os_to_project(os_id: str, user: dict = Depends(current_user)):
+    os_doc = await db.ordem_servico.find_one({"os_id": os_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not os_doc:
+        raise HTTPException(status_code=404, detail="OS não encontrada")
+    if os_doc.get("project_id"):
+        return {"ok": True, "project_id": os_doc["project_id"], "already": True}
+    proj_id = gen_id("proj")
+    now = iso(now_utc())
+    await db.projects.insert_one({
+        "project_id": proj_id, "org_id": user["org_id"],
+        "name": os_doc["title"],
+        "description": f"Projeto criado a partir da OS {os_id} — cliente: {os_doc['client_name']}",
+        "created_at": now,
+    })
+    for it in os_doc.get("items", []):
+        await db.tasks.insert_one({
+            "task_id": gen_id("task"), "org_id": user["org_id"], "project_id": proj_id,
+            "title": it.get("description") or "Item", "status": "a_fazer",
+            "assignee": "", "due_date": os_doc.get("due_date", ""), "created_at": now,
+        })
+    await db.ordem_servico.update_one(
+        {"os_id": os_id, "org_id": user["org_id"]},
+        {"$set": {"project_id": proj_id, "status": "em_execucao"}},
+    )
+    return {"ok": True, "project_id": proj_id}
+
+# ----------------- Stripe / PIX Payments -----------------
+class CheckoutIn(BaseModel):
+    lookup_key: str
+    origin_url: str
+    quantity: int = 1
+    os_id: Optional[str] = None  # link to Ordem de Serviço
+    trial_days: Optional[int] = None
+
+def _is_pix_capable(currency: str, is_one_time: bool) -> bool:
+    # Stripe supports PIX for BRL one-time payments (not subscriptions)
+    return currency.lower() == "brl" and is_one_time
+
+@api.post("/payments/checkout")
+async def payments_checkout(body: CheckoutIn, request: Request):
+    prices = stripe.Price.list(lookup_keys=[body.lookup_key], active=True, limit=1).data
+    if not prices:
+        raise HTTPException(500, f"Preço não encontrado: {body.lookup_key}")
+    price = prices[0]
+    is_subscription = bool(price.recurring)
+    kwargs: Dict[str, Any] = dict(
+        line_items=[{"price": price.id, "quantity": body.quantity}],
+        mode="subscription" if is_subscription else "payment",
+        success_url=f"{body.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{body.origin_url}/payment/cancel",
+        metadata={"lookup_key": body.lookup_key, "os_id": body.os_id or ""},
+    )
+    # Try to infer authenticated user (optional — checkout works for guests too)
+    try:
+        token = None
+        cookies = request.headers.get("cookie", "") or ""
+        if "session_token=" in cookies:
+            token = cookies.split("session_token=", 1)[1].split(";", 1)[0]
+        if not token:
+            auth = request.headers.get("Authorization", "")
+            if auth.startswith("Bearer "):
+                token = auth.split(" ", 1)[1]
+        user = await get_user_from_token(token) if token else None
+        if user:
+            kwargs["metadata"].update({"user_id": user["user_id"], "org_id": user["org_id"]})
+    except Exception:
+        user = None
+
+    # PIX enablement (BRL + one-time payments). Falls back to card if PIX isn't enabled on this Stripe account.
+    is_pix = _is_pix_capable(price.currency, not is_subscription)
+    if is_subscription and body.trial_days and body.trial_days > 0:
+        kwargs["subscription_data"] = {"trial_period_days": int(body.trial_days)}
+
+    session = None
+    if is_pix:
+        pix_kwargs = dict(kwargs)
+        pix_kwargs["payment_method_types"] = ["card", "pix"]
+        pix_kwargs["payment_method_options"] = {"pix": {"expires_after_seconds": 3600}}
+        try:
+            session = stripe.checkout.Session.create(**pix_kwargs)
+        except stripe.error.StripeError as e:
+            msg = (getattr(e, "user_message", None) or str(e)).lower()
+            if "pix" in msg or "invalid" in msg:
+                logging.warning("PIX unavailable on this account, falling back to card")
+                is_pix = False
+                session = None
+            else:
+                raise HTTPException(status_code=400, detail=f"Stripe: {getattr(e,'user_message',None) or str(e)[:200]}")
+    if session is None:
+        try:
+            session = stripe.checkout.Session.create(**kwargs)
+        except stripe.error.StripeError as e:
+            raise HTTPException(status_code=400, detail=f"Stripe: {getattr(e,'user_message',None) or str(e)[:200]}")
+
+    await db.payment_transactions.insert_one({
+        "session_id": session.id,
+        "lookup_key": body.lookup_key,
+        "amount": (price.unit_amount or 0) * body.quantity,
+        "currency": price.currency,
+        "status": "initiated",
+        "payment_status": "pending",
+        "user_id": (user or {}).get("user_id"),
+        "org_id": (user or {}).get("org_id"),
+        "os_id": body.os_id,
+        "is_pix_enabled": is_pix,
+        "is_subscription": is_subscription,
+        "created_at": iso(now_utc()),
+        "updated_at": iso(now_utc()),
+    })
+    return {"checkout_url": session.url, "session_id": session.id, "pix_enabled": is_pix}
+
+class OSCheckoutIn(BaseModel):
+    os_id: str
+    origin_url: str
+
+@api.post("/payments/os-checkout")
+async def os_checkout(body: OSCheckoutIn, user: dict = Depends(current_user)):
+    o = await db.ordem_servico.find_one({"os_id": body.os_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not o:
+        raise HTTPException(404, "OS não encontrada")
+    amount = int(round(float(o.get("total") or 0) * 100))
+    if amount <= 0:
+        raise HTTPException(400, "OS sem valor total")
+    try:
+        session = stripe.checkout.Session.create(
+            line_items=[{
+                "price_data": {
+                    "currency": "brl",
+                    "product_data": {"name": o.get("title") or f"OS {o['os_id']}"},
+                    "unit_amount": amount,
+                },
+                "quantity": 1,
+            }],
+            mode="payment",
+            payment_method_types=["card", "pix"],
+            payment_method_options={"pix": {"expires_after_seconds": 3600}},
+            success_url=f"{body.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{body.origin_url}/payment/cancel",
+            metadata={"os_id": body.os_id, "user_id": user["user_id"], "org_id": user["org_id"]},
+        )
+        pix_enabled = True
+    except stripe.error.StripeError as e:
+        msg = (getattr(e, "user_message", None) or str(e)).lower()
+        if "pix" in msg:
+            # Fallback to card-only
+            try:
+                session = stripe.checkout.Session.create(
+                    line_items=[{
+                        "price_data": {
+                            "currency": "brl",
+                            "product_data": {"name": o.get("title") or f"OS {o['os_id']}"},
+                            "unit_amount": amount,
+                        },
+                        "quantity": 1,
+                    }],
+                    mode="payment",
+                    success_url=f"{body.origin_url}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+                    cancel_url=f"{body.origin_url}/payment/cancel",
+                    metadata={"os_id": body.os_id, "user_id": user["user_id"], "org_id": user["org_id"]},
+                )
+                pix_enabled = False
+            except stripe.error.StripeError as e2:
+                raise HTTPException(400, f"Stripe: {getattr(e2,'user_message',None) or str(e2)[:200]}")
+        else:
+            raise HTTPException(400, f"Stripe: {getattr(e,'user_message',None) or str(e)[:200]}")
+    await db.payment_transactions.insert_one({
+        "session_id": session.id, "lookup_key": "os_custom",
+        "amount": amount, "currency": "brl",
+        "status": "initiated", "payment_status": "pending",
+        "user_id": user["user_id"], "org_id": user["org_id"],
+        "os_id": body.os_id, "is_pix_enabled": pix_enabled, "is_subscription": False,
+        "created_at": iso(now_utc()), "updated_at": iso(now_utc()),
+    })
+    return {"checkout_url": session.url, "session_id": session.id, "pix_enabled": pix_enabled}
+
+@api.get("/payments/status/{session_id}")
+async def payments_status(session_id: str):
+    record = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+    if not record:
+        raise HTTPException(404, "Transação não encontrada")
+    if record.get("payment_status") != "paid":
+        try:
+            s = stripe.checkout.Session.retrieve(session_id)
+            if s.payment_status == "paid" or s.status == "complete":
+                await db.payment_transactions.update_one(
+                    {"session_id": session_id, "payment_status": {"$ne": "paid"}},
+                    {"$set": {
+                        "status": "completed", "payment_status": "paid",
+                        "stripe_subscription_id": s.subscription,
+                        "stripe_payment_intent_id": s.payment_intent,
+                        "updated_at": iso(now_utc()),
+                    }},
+                )
+                record = await db.payment_transactions.find_one({"session_id": session_id}, {"_id": 0})
+                # If tied to OS, mark OS as approved/paid
+                if record.get("os_id"):
+                    await db.ordem_servico.update_one(
+                        {"os_id": record["os_id"]},
+                        {"$set": {"status": "aprovada", "paid_at": iso(now_utc())}},
+                    )
+        except stripe.error.StripeError:
+            pass
+    return {
+        "session_id": record["session_id"],
+        "status": record["status"],
+        "payment_status": record["payment_status"],
+        "amount": record.get("amount"),
+        "currency": record.get("currency"),
+        "lookup_key": record.get("lookup_key"),
+    }
+
+@api.post("/stripe/webhook")
+async def stripe_webhook(request: Request):
+    payload = await request.body()
+    sig = request.headers.get("stripe-signature", "")
+    try:
+        event = stripe.Webhook.construct_event(payload, sig, STRIPE_WEBHOOK_SECRET)
+    except Exception:
+        raise HTTPException(400, "Invalid signature")
+    obj, t = event["data"]["object"], event["type"]
+    now = iso(now_utc())
+    if t == "checkout.session.completed":
+        await db.payment_transactions.update_one(
+            {"session_id": obj["id"], "payment_status": {"$ne": "paid"}},
+            {"$set": {
+                "status": "completed",
+                "payment_status": obj.get("payment_status", "paid"),
+                "stripe_subscription_id": obj.get("subscription"),
+                "stripe_payment_intent_id": obj.get("payment_intent"),
+                "updated_at": now,
+            }},
+        )
+        # Sync OS if linked
+        meta = obj.get("metadata") or {}
+        if meta.get("os_id"):
+            await db.ordem_servico.update_one({"os_id": meta["os_id"]},
+                {"$set": {"status": "aprovada", "paid_at": now}})
+    elif t == "checkout.session.async_payment_succeeded":
+        await db.payment_transactions.update_one({"session_id": obj["id"]},
+            {"$set": {"payment_status": "paid", "updated_at": now}})
+    elif t == "checkout.session.async_payment_failed":
+        await db.payment_transactions.update_one({"session_id": obj["id"]},
+            {"$set": {"status": "failed", "payment_status": "failed", "updated_at": now}})
+    elif t == "checkout.session.expired":
+        await db.payment_transactions.update_one({"session_id": obj["id"]},
+            {"$set": {"status": "expired", "payment_status": "expired", "updated_at": now}})
+    elif t == "charge.refunded":
+        await db.payment_transactions.update_one({"stripe_payment_intent_id": obj.get("payment_intent")},
+            {"$set": {"status": "refunded", "payment_status": "refunded", "updated_at": now}})
+    return {"status": "ok"}
+
+# ----------------- Public: Founder Deal live counter -----------------
+@api.get("/public/founder-deal")
+async def founder_deal():
+    claimed = await db.payment_transactions.count_documents({
+        "lookup_key": "prisma_founder_deal",
+        "payment_status": "paid",
+    })
+    remaining = max(0, FOUNDER_CAP - claimed)
+    return {"cap": FOUNDER_CAP, "claimed": claimed, "remaining": remaining}
+
+# ----------------- Copiloto: Ações operacionais (tool calling) -----------------
+class CopilotCreateTask(BaseModel):
+    title: str
+    project_id: Optional[str] = None
+    assignee: str = ""
+    due_date: str = ""
+
+@api.post("/copilot/create-task")
+async def cop_create_task(body: CopilotCreateTask, user: dict = Depends(current_user)):
+    project_id = body.project_id
+    if not project_id:
+        proj = await db.projects.find_one({"org_id": user["org_id"]}, {"_id": 0})
+        if not proj:
+            proj_id = gen_id("proj")
+            await db.projects.insert_one({
+                "project_id": proj_id, "org_id": user["org_id"],
+                "name": "Tarefas do Copiloto", "description": "Auto-criado pelo Copiloto",
+                "created_at": iso(now_utc()),
+            })
+            project_id = proj_id
+        else:
+            project_id = proj["project_id"]
+    doc = {
+        "task_id": gen_id("task"), "org_id": user["org_id"], "project_id": project_id,
+        "title": body.title, "status": "a_fazer",
+        "assignee": body.assignee, "due_date": body.due_date,
+        "created_at": iso(now_utc()), "created_by": "copilot",
+    }
+    await db.tasks.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+async def _llm_generate(prompt: str, system: str = "") -> str:
+    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    chat = LlmChat(
+        api_key=EMERGENT_LLM_KEY,
+        session_id=gen_id("copgen"),
+        system_message=system or "Você é o Copiloto Prisma. Responda em português (Brasil) com clareza e objetividade.",
+    ).with_model("anthropic", "claude-sonnet-4-6")
+    resp = await chat.send_message(UserMessage(text=prompt))
+    return resp if isinstance(resp, str) else str(resp)
+
+class CopilotProposal(BaseModel):
+    lead_id: Optional[str] = None
+    client_name: Optional[str] = None
+    scope: Optional[str] = None
+    value: Optional[float] = None
+
+@api.post("/copilot/generate-proposal")
+async def cop_generate_proposal(body: CopilotProposal, user: dict = Depends(current_user)):
+    lead = None
+    if body.lead_id:
+        lead = await db.leads.find_one({"lead_id": body.lead_id, "org_id": user["org_id"]}, {"_id": 0})
+    client = body.client_name or (lead["name"] if lead else "Cliente")
+    company = (lead or {}).get("company", "")
+    scope = body.scope or (lead or {}).get("notes") or "Escopo a alinhar em reunião de kickoff."
+    value = body.value if body.value is not None else float((lead or {}).get("value") or 0)
+    prompt = f"""Gere uma proposta comercial completa em português para o cliente abaixo.
+Formato: markdown com seções (Resumo, Escopo, Entregas, Prazos, Investimento, Próximos passos).
+Cliente: {client} ({company or 'sem empresa'})
+Escopo/contexto: {scope}
+Investimento sugerido: R$ {value:,.2f}
+Tom: profissional, direto, gerando confiança. Assine como equipe Prisma."""
+    content = await _llm_generate(prompt)
+    doc_id = gen_id("doc")
+    doc = {
+        "doc_id": doc_id, "org_id": user["org_id"],
+        "title": f"Proposta — {client}.md",
+        "kind": "proposta", "size": len(content.encode("utf-8")),
+        "storage_path": "",
+        "created_at": iso(now_utc()),
+        "generated_by": "copilot",
+        "lead_id": body.lead_id,
+        "markdown": content,
+    }
+    await db.documents.insert_one(doc)
+    doc.pop("_id", None)
+    return {"proposal": content, "doc_id": doc_id, "client": client, "value": value}
+
+class CopilotReport(BaseModel):
+    type: Literal["crm", "financeiro", "projetos", "geral"] = "geral"
+    period: Optional[str] = None
+
+@api.post("/copilot/generate-report")
+async def cop_generate_report(body: CopilotReport, user: dict = Depends(current_user)):
+    org = user["org_id"]
+    ctx: Dict[str, Any] = {}
+    if body.type in ("crm", "geral"):
+        leads = await db.leads.find({"org_id": org}, {"_id": 0}).to_list(500)
+        by_stage: Dict[str, Any] = {}
+        for l in leads:
+            s = l.get("stage", "Lead")
+            by_stage.setdefault(s, {"count": 0, "value": 0})
+            by_stage[s]["count"] += 1
+            by_stage[s]["value"] += l.get("value", 0) or 0
+        ctx["crm"] = {"total": len(leads), "por_estagio": by_stage}
+    if body.type in ("financeiro", "geral"):
+        tx = await db.finance.find({"org_id": org}, {"_id": 0}).to_list(500)
+        receita = sum(t["amount"] for t in tx if t["kind"] == "receita")
+        despesa = sum(t["amount"] for t in tx if t["kind"] == "despesa")
+        ctx["financeiro"] = {"receita": receita, "despesa": despesa, "saldo": receita - despesa, "n_tx": len(tx)}
+    if body.type in ("projetos", "geral"):
+        n_proj = await db.projects.count_documents({"org_id": org})
+        tasks_open = await db.tasks.count_documents({"org_id": org, "status": {"$ne": "concluido"}})
+        tasks_done = await db.tasks.count_documents({"org_id": org, "status": "concluido"})
+        ctx["projetos"] = {"projetos": n_proj, "tarefas_abertas": tasks_open, "tarefas_concluidas": tasks_done}
+    import json as _json
+    prompt = f"""Gere um relatório executivo em português (markdown) sobre "{body.type}" da empresa.
+Dados brutos (JSON):
+{_json.dumps(ctx, ensure_ascii=False, indent=2)}
+
+Estrutura: Resumo executivo, Números-chave, Análise, Riscos, 3 recomendações acionáveis.
+Tom: consultivo, curto, com bullets. Formatar valores em reais."""
+    content = await _llm_generate(prompt)
+    rep_id = gen_id("rep")
+    rep = {
+        "report_id": rep_id, "org_id": org, "type": body.type,
+        "period": body.period or datetime.now().strftime("%Y-%m"),
+        "content": content, "data": ctx,
+        "created_at": iso(now_utc()), "created_by": user["user_id"],
+    }
+    await db.copilot_reports.insert_one(rep)
+    rep.pop("_id", None)
+    # Also save as a document for easy retrieval
+    await db.documents.insert_one({
+        "doc_id": gen_id("doc"), "org_id": org,
+        "title": f"Relatório {body.type} — {rep['period']}.md",
+        "kind": "relatorio", "size": len(content.encode("utf-8")),
+        "storage_path": "", "created_at": iso(now_utc()),
+        "generated_by": "copilot", "markdown": content, "report_id": rep_id,
+    })
+    return {"report": content, "report_id": rep_id, "data": ctx}
+
+@api.get("/copilot/reports")
+async def cop_list_reports(user: dict = Depends(current_user)):
+    items = await db.copilot_reports.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return {"items": items}
+
 # ----------------- Startup / health -----------------
 @app.on_event("startup")
 async def startup():
@@ -906,6 +1489,10 @@ async def startup():
         init_storage()
     except Exception as e:
         logging.warning(f"storage startup: {e}")
+    try:
+        ensure_stripe_catalog()
+    except Exception as e:
+        logging.warning(f"stripe catalog startup: {e}")
 
 @api.get("/")
 async def root():
