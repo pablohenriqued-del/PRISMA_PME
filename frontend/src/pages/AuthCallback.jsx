@@ -31,9 +31,9 @@ export default function AuthCallback() {
   }, [navigate, setUser]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--paper))]">
-      <div className="flex items-center gap-3 text-sm text-black/60">
-        <div className="h-2 w-2 rounded-full bg-[hsl(var(--ink))] pulse-ring" />
+    <div className="min-h-screen flex items-center justify-center bg-[#08090A]">
+      <div className="flex items-center gap-3 text-sm text-zinc-400">
+        <div className="h-2 w-2 rounded-full bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] pulse-ring" />
         Autenticando…
       </div>
     </div>

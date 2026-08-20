@@ -185,13 +185,13 @@ export default function OrdemServico() {
     <div className="space-y-8 fade-up" data-testid="ordem-servico-page">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <div className="overline text-black/50">Ordem de serviço</div>
+          <div className="overline text-zinc-500">Ordem de serviço</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">Do orçamento à entrega.</h1>
-          <p className="text-black/60 mt-2 text-sm">Envio automático por e-mail + WhatsApp, assinatura eletrônica e cobrança PIX no mesmo link.</p>
+          <p className="text-zinc-400 mt-2 text-sm">Envio automático por e-mail + WhatsApp, assinatura eletrônica e cobrança PIX no mesmo link.</p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
           <div className="text-right">
-            <div className="overline text-black/50">Total em OS</div>
+            <div className="overline text-zinc-500">Total em OS</div>
             <div className="font-display text-2xl mt-1">{brl(totalPipeline)}</div>
           </div>
           <Select value={filter} onValueChange={setFilter}>
@@ -203,7 +203,7 @@ export default function OrdemServico() {
           </Select>
           <Dialog open={openNew} onOpenChange={setOpenNew}>
             <DialogTrigger asChild>
-              <Button data-testid="new-os-btn" className="h-10 rounded-md bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]">
+              <Button data-testid="new-os-btn" className="h-10 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white">
                 <Plus className="h-4 w-4 mr-2" /> Nova OS
               </Button>
             </DialogTrigger>
@@ -235,7 +235,7 @@ export default function OrdemServico() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label>Itens</Label>
-                    <button type="button" onClick={addItem} className="text-xs text-black/60 hover:text-black flex items-center gap-1"><Plus className="h-3 w-3" /> item</button>
+                    <button type="button" onClick={addItem} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1"><Plus className="h-3 w-3" /> item</button>
                   </div>
                   <div className="space-y-2">
                     {form.items.map((it, i) => (
@@ -243,20 +243,20 @@ export default function OrdemServico() {
                         <Input className="col-span-6" placeholder="Descrição" data-testid={`os-item-desc-${i}`} value={it.description} onChange={(e) => setItem(i, { description: e.target.value })} />
                         <Input className="col-span-2" type="number" placeholder="Qtd" data-testid={`os-item-qty-${i}`} value={it.quantity} onChange={(e) => setItem(i, { quantity: e.target.value })} />
                         <Input className="col-span-3" type="number" placeholder="Valor unit." data-testid={`os-item-val-${i}`} value={it.unit_price} onChange={(e) => setItem(i, { unit_price: e.target.value })} />
-                        <button type="button" onClick={() => rmItem(i)} className="col-span-1 text-black/40 hover:text-red-600" aria-label="remover"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => rmItem(i)} className="col-span-1 text-zinc-500 hover:text-red-600" aria-label="remover"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-3 text-right text-sm text-black/60">Total: <b className="text-black">{brl(total(form.items))}</b></div>
+                  <div className="mt-3 text-right text-sm text-zinc-400">Total: <b className="text-white">{brl(total(form.items))}</b></div>
                 </div>
 
                 {/* Custom fields */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label>Campos personalizados</Label>
-                    <button type="button" onClick={addCField} className="text-xs text-black/60 hover:text-black flex items-center gap-1" data-testid="add-custom-field"><Plus className="h-3 w-3" /> campo</button>
+                    <button type="button" onClick={addCField} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1" data-testid="add-custom-field"><Plus className="h-3 w-3" /> campo</button>
                   </div>
-                  {form.custom_fields.length === 0 && <div className="text-xs text-black/40">Ex.: número da NF, código do cliente, prazo de garantia…</div>}
+                  {form.custom_fields.length === 0 && <div className="text-xs text-zinc-500">Ex.: número da NF, código do cliente, prazo de garantia…</div>}
                   <div className="space-y-2">
                     {form.custom_fields.map((cf, i) => (
                       <div key={i} className="grid grid-cols-12 gap-2">
@@ -266,14 +266,14 @@ export default function OrdemServico() {
                           <SelectContent>{FIELD_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                         </Select>
                         <Input className="col-span-4" type={cf.type === "date" ? "date" : (cf.type === "number" || cf.type === "money") ? "number" : "text"} placeholder="Valor" value={cf.value || ""} onChange={(e) => setCField(i, { value: e.target.value })} />
-                        <button type="button" onClick={() => rmCField(i)} className="col-span-1 text-black/40 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => rmCField(i)} className="col-span-1 text-zinc-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     ))}
                   </div>
                 </div>
 
                 {/* Recurrence */}
-                <div className="border border-black/10 rounded-md p-3">
+                <div className="border border-white/10 rounded-md p-3">
                   <div className="flex items-center justify-between">
                     <label className="flex items-center gap-2 text-sm cursor-pointer">
                       <input type="checkbox" checked={!!form.recurrence?.enabled} onChange={toggleRecurrence} data-testid="os-recurrence-toggle" />
@@ -287,11 +287,11 @@ export default function OrdemServico() {
                       </Select>
                     )}
                   </div>
-                  {form.recurrence?.enabled && <p className="text-xs text-black/50 mt-2">Uma nova OS será criada automaticamente {form.recurrence.interval === "weekly" ? "toda semana" : form.recurrence.interval === "quarterly" ? "a cada 3 meses" : "todo mês"}.</p>}
+                  {form.recurrence?.enabled && <p className="text-xs text-zinc-500 mt-2">Uma nova OS será criada automaticamente {form.recurrence.interval === "weekly" ? "toda semana" : form.recurrence.interval === "quarterly" ? "a cada 3 meses" : "todo mês"}.</p>}
                 </div>
 
                 <div><Label>Observações</Label><Textarea rows={3} data-testid="os-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
-                <DialogFooter><Button type="submit" data-testid="save-os-btn" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]">Criar OS</Button></DialogFooter>
+                <DialogFooter><Button type="submit" data-testid="save-os-btn" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white">Criar OS</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -301,9 +301,9 @@ export default function OrdemServico() {
       {/* Quick shortcuts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {leads.length > 0 && (
-          <div className="rounded-md border border-black/10 bg-white p-4 flex items-center gap-3 flex-wrap">
-            <Wand2 className="h-4 w-4 text-black/50" />
-            <div className="text-sm text-black/70">A partir de um lead</div>
+          <div className="rounded-md border border-white/10 bg-[#121214] p-4 flex items-center gap-3 flex-wrap">
+            <Wand2 className="h-4 w-4 text-zinc-500" />
+            <div className="text-sm text-zinc-300">A partir de um lead</div>
             <Select onValueChange={(v) => fromLead(v)}>
               <SelectTrigger className="h-9 flex-1 min-w-[200px]" data-testid="quick-fromlead"><SelectValue placeholder="Selecione o lead…" /></SelectTrigger>
               <SelectContent>{leads.map((l) => <SelectItem key={l.lead_id} value={l.lead_id}>{l.name}{l.company ? ` · ${l.company}` : ""}</SelectItem>)}</SelectContent>
@@ -311,9 +311,9 @@ export default function OrdemServico() {
           </div>
         )}
         {templates.length > 0 && (
-          <div className="rounded-md border border-black/10 bg-white p-4 flex items-center gap-3 flex-wrap">
-            <BookmarkPlus className="h-4 w-4 text-black/50" />
-            <div className="text-sm text-black/70">A partir de um template</div>
+          <div className="rounded-md border border-white/10 bg-[#121214] p-4 flex items-center gap-3 flex-wrap">
+            <BookmarkPlus className="h-4 w-4 text-zinc-500" />
+            <div className="text-sm text-zinc-300">A partir de um template</div>
             <Select onValueChange={(v) => fromTemplate(v)}>
               <SelectTrigger className="h-9 flex-1 min-w-[200px]" data-testid="quick-fromtpl"><SelectValue placeholder="Selecione o template…" /></SelectTrigger>
               <SelectContent>{templates.map((t) => <SelectItem key={t.template_id} value={t.template_id}>{t.name}</SelectItem>)}</SelectContent>
@@ -324,7 +324,7 @@ export default function OrdemServico() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4" data-testid="os-list">
         {filtered.length === 0 && (
-          <div className="col-span-full text-center py-16 text-black/50 border border-dashed border-black/15 rounded-md">
+          <div className="col-span-full text-center py-16 text-zinc-500 border border-dashed border-white/15 rounded-md">
             <ClipboardList className="h-6 w-6 mx-auto mb-2 opacity-60" />
             Nenhuma OS ainda. Crie a primeira para acompanhar do orçamento à execução.
           </div>
@@ -333,17 +333,17 @@ export default function OrdemServico() {
           const status = STATUSES.find((s) => s.key === o.status) || STATUSES[0];
           const isExpanded = expandedId === o.os_id;
           return (
-            <div key={o.os_id} data-testid={`os-card-${o.os_id}`} className="rounded-md border border-black/10 bg-white p-5">
+            <div key={o.os_id} data-testid={`os-card-${o.os_id}`} className="rounded-md border border-white/10 bg-[#121214] p-5">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-black/50">
+                  <div className="flex items-center gap-2 text-xs uppercase tracking-widest text-zinc-500">
                     {o.client_name}
                     {o.recurrence?.enabled && <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-blue-700"><Repeat className="h-3 w-3" />{RECURRENCE_INTERVALS.find(r => r.key === o.recurrence.interval)?.label}</span>}
                     {o.signed_at && <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700"><ShieldCheck className="h-3 w-3" />Assinada</span>}
                     {o.sent_at && !o.signed_at && <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-700">Enviada</span>}
                   </div>
                   <div className="font-display text-lg mt-1 truncate">{o.title}</div>
-                  <div className="mt-2 text-xs text-black/50">
+                  <div className="mt-2 text-xs text-zinc-500">
                     {o.lead_id && <span className="mr-2">CRM ↔</span>}
                     {o.project_id && <span>Projeto ↔</span>}
                   </div>
@@ -362,21 +362,21 @@ export default function OrdemServico() {
               {isExpanded && (
                 <>
                   {(o.items || []).length > 0 && (
-                    <ul className="mt-4 space-y-1 text-sm border-t border-black/5 pt-3">
+                    <ul className="mt-4 space-y-1 text-sm border-t border-white/5 pt-3">
                       {o.items.map((it, i) => (
-                        <li key={i} className="flex items-center justify-between text-black/70">
+                        <li key={i} className="flex items-center justify-between text-zinc-300">
                           <span className="truncate">{it.description}</span>
-                          <span className="font-mono text-xs text-black/60">{Number(it.quantity) || 1} × {brl(it.unit_price)}</span>
+                          <span className="font-mono text-xs text-zinc-400">{Number(it.quantity) || 1} × {brl(it.unit_price)}</span>
                         </li>
                       ))}
                     </ul>
                   )}
                   {(o.custom_fields || []).length > 0 && (
-                    <div className="mt-3 border-t border-black/5 pt-3">
-                      <div className="overline text-black/50 mb-2">Campos personalizados</div>
+                    <div className="mt-3 border-t border-white/5 pt-3">
+                      <div className="overline text-zinc-500 mb-2">Campos personalizados</div>
                       <div className="grid grid-cols-2 gap-2 text-xs">
                         {o.custom_fields.map((cf, i) => (
-                          <div key={i}><span className="text-black/50">{cf.name}: </span><b>{cf.type === "money" ? brl(cf.value) : String(cf.value ?? "—")}</b></div>
+                          <div key={i}><span className="text-zinc-500">{cf.name}: </span><b>{cf.type === "money" ? brl(cf.value) : String(cf.value ?? "—")}</b></div>
                         ))}
                       </div>
                     </div>
@@ -394,20 +394,20 @@ export default function OrdemServico() {
                 <Button size="sm" variant="outline" className="h-8" onClick={() => toProject(o.os_id)} data-testid={`to-project-${o.os_id}`}>
                   <KanbanSquare className="h-3.5 w-3.5 mr-1.5" /> Projeto <ArrowRight className="h-3 w-3 ml-1" />
                 </Button>
-                <Button size="sm" className="h-8 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" onClick={() => payOS(o)} data-testid={`pay-os-${o.os_id}`}>
+                <Button size="sm" className="h-8 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" onClick={() => payOS(o)} data-testid={`pay-os-${o.os_id}`}>
                   <CreditCard className="h-3.5 w-3.5 mr-1.5" /> PIX
                 </Button>
                 <button
                   onClick={() => { setSaveTplOpen(true); setTplName(o.title || ""); window._tplSource = o; }}
-                  className="text-xs text-black/50 hover:text-black flex items-center gap-1"
+                  className="text-xs text-zinc-500 hover:text-white flex items-center gap-1"
                   data-testid={`save-tpl-${o.os_id}`}
                   title="Salvar como template">
                   <BookmarkPlus className="h-3.5 w-3.5" />
                 </button>
-                <button onClick={() => setExpandedId(isExpanded ? null : o.os_id)} className="ml-auto text-black/40 hover:text-black text-xs flex items-center gap-1" data-testid={`toggle-${o.os_id}`}>
+                <button onClick={() => setExpandedId(isExpanded ? null : o.os_id)} className="ml-auto text-zinc-500 hover:text-white text-xs flex items-center gap-1" data-testid={`toggle-${o.os_id}`}>
                   {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />} {isExpanded ? "Recolher" : "Detalhes"}
                 </button>
-                <button onClick={() => removeOS(o)} className="text-black/40 hover:text-red-600 text-xs" data-testid={`del-os-${o.os_id}`} title="Excluir">
+                <button onClick={() => removeOS(o)} className="text-zinc-500 hover:text-red-600 text-xs" data-testid={`del-os-${o.os_id}`} title="Excluir">
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -423,7 +423,7 @@ export default function OrdemServico() {
           <div className="space-y-3 pt-2">
             <div><Label>Nome do template</Label><Input value={tplName} onChange={(e) => setTplName(e.target.value)} placeholder="Ex.: Website institucional PMEs" data-testid="tpl-name" /></div>
             <DialogFooter>
-              <Button onClick={() => saveAsTemplate(window._tplSource || {})} className="bg-[hsl(var(--ink))] text-[hsl(var(--paper))] hover:bg-black" data-testid="tpl-save-btn">Salvar template</Button>
+              <Button onClick={() => saveAsTemplate(window._tplSource || {})} className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white hover:opacity-90" data-testid="tpl-save-btn">Salvar template</Button>
             </DialogFooter>
           </div>
         </DialogContent>

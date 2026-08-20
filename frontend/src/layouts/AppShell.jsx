@@ -55,8 +55,8 @@ export default function AppShell() {
 
   if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--paper))]">
-        <div className="text-sm text-black/60">Carregando…</div>
+      <div className="min-h-screen flex items-center justify-center bg-[#08090A]">
+        <div className="text-sm text-zinc-400">Carregando…</div>
       </div>
     );
   }
@@ -64,22 +64,22 @@ export default function AppShell() {
   const activeModule = NAV.find((n) => n.to === location.pathname)?.label || "Núcleo";
 
   return (
-    <div className="min-h-screen flex bg-[hsl(var(--paper))] text-[hsl(var(--ink))]">
+    <div className="min-h-screen flex bg-[#08090A] text-white">
       {/* SIDEBAR */}
       <aside
         data-testid="app-sidebar"
-        className={`sticky top-0 h-screen shrink-0 border-r border-black/10 bg-white/40 backdrop-blur-sm flex flex-col transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[248px]"}`}
+        className={`sticky top-0 h-screen shrink-0 border-r border-white/5 bg-[#08090A] flex flex-col transition-[width] duration-200 ${collapsed ? "w-[76px]" : "w-[240px]"}`}
       >
-        <div className="h-16 flex items-center gap-3 px-5 border-b border-black/10">
-          <div className="h-8 w-8 rounded-md bg-[hsl(var(--ink))] flex items-center justify-center shrink-0 relative overflow-hidden">
-            <svg width="18" height="18" viewBox="0 0 44 44" fill="none" aria-hidden="true">
-              <path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" />
+        <div className="h-16 flex items-center gap-3 px-5 border-b border-white/5">
+          <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#5E6AD2] to-[#8B5CF6] flex items-center justify-center shrink-0 shadow-[0_0_16px_rgba(94,106,210,0.5)]">
+            <svg width="15" height="15" viewBox="0 0 44 44" fill="none" aria-hidden="true">
+              <path d="M22 4 L40 34 L4 34 Z" fill="white" strokeLinejoin="round" />
             </svg>
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <div className="text-base leading-none truncate italic" style={{ fontFamily: "'Fraunces', serif" }}>Prisma</div>
-              <div className="text-[10px] uppercase tracking-widest text-black/50 truncate mt-1">workspace</div>
+              <div className="font-display text-base font-semibold leading-none truncate">Prisma</div>
+              <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500 truncate mt-1">workspace</div>
             </div>
           )}
         </div>
@@ -92,10 +92,10 @@ export default function AppShell() {
               end={end}
               data-testid={`nav-${label.toLowerCase()}`}
               className={({ isActive }) =>
-                `group flex items-center gap-3 rounded-md px-3 h-10 text-sm transition-colors ${
+                `group relative flex items-center gap-3 rounded-lg px-3 h-10 text-sm transition-colors ${
                   isActive
-                    ? "bg-[hsl(var(--ink))] text-[hsl(var(--paper))]"
-                    : "text-black/70 hover:bg-black/5 hover:text-black"
+                    ? "bg-white/5 text-white before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-0.5 before:rounded-full before:bg-gradient-to-b before:from-[#5E6AD2] before:to-[#8B5CF6]"
+                    : "text-zinc-400 hover:bg-white/[0.03] hover:text-white"
                 }`
               }
             >
@@ -104,46 +104,46 @@ export default function AppShell() {
             </NavLink>
           ))}
 
-          <div className="mt-3 border-t border-black/10 pt-3">
+          <div className="mt-3 border-t border-white/5 pt-3">
             <button
               data-testid="open-copilot-side"
               onClick={() => setCopilotOpen(true)}
-              className={`group w-full flex items-center gap-3 rounded-md px-3 h-10 text-sm transition-colors bg-black/5 hover:bg-black/10 text-black`}
+              className="group w-full flex items-center gap-3 rounded-lg px-3 h-10 text-sm transition-colors bg-gradient-to-r from-[#5E6AD2]/10 to-[#8B5CF6]/10 border border-[#5E6AD2]/20 hover:from-[#5E6AD2]/20 hover:to-[#8B5CF6]/20 text-white"
             >
-              <Sparkles className="h-4 w-4 shrink-0" strokeWidth={1.6} />
+              <Sparkles className="h-4 w-4 shrink-0 text-[#8B5CF6]" strokeWidth={1.8} />
               {!collapsed && (
                 <>
                   <span className="truncate">Copiloto</span>
-                  <kbd className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded border border-black/15 text-black/60">⌘I</kbd>
+                  <kbd className="ml-auto text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/15 text-zinc-400">⌘I</kbd>
                 </>
               )}
             </button>
           </div>
         </nav>
 
-        <div className="p-3 border-t border-black/10">
+        <div className="p-3 border-t border-white/5">
           <button
             data-testid="user-menu"
-            className="w-full flex items-center gap-3 rounded-md px-2 py-2 hover:bg-black/5 transition-colors"
+            className="w-full flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-white/5 transition-colors"
             onClick={logout}
             title="Sair"
           >
-            <Avatar className="h-8 w-8">
+            <Avatar className="h-8 w-8 ring-2 ring-white/10">
               <AvatarImage src={user.picture} alt={user.name} />
-              <AvatarFallback className="text-xs">{user.name?.[0]}</AvatarFallback>
+              <AvatarFallback className="text-xs bg-gradient-to-br from-[#5E6AD2] to-[#8B5CF6] text-white">{user.name?.[0]}</AvatarFallback>
             </Avatar>
             {!collapsed && (
               <div className="flex-1 min-w-0 text-left">
                 <div className="text-sm font-medium truncate">{user.name}</div>
-                <div className="text-[11px] text-black/50 truncate">{user.email}</div>
+                <div className="text-[11px] text-zinc-500 truncate">{user.email}</div>
               </div>
             )}
-            {!collapsed && <LogOut className="h-4 w-4 text-black/50" />}
+            {!collapsed && <LogOut className="h-4 w-4 text-zinc-500" />}
           </button>
 
           <button
             onClick={() => setCollapsed((v) => !v)}
-            className="mt-2 w-full flex items-center justify-center gap-2 h-8 rounded-md text-xs text-black/50 hover:text-black hover:bg-black/5 transition-colors"
+            className="mt-2 w-full flex items-center justify-center gap-2 h-8 rounded-lg text-xs text-zinc-500 hover:text-white hover:bg-white/5 transition-colors"
             data-testid="toggle-sidebar"
           >
             {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <><PanelLeftClose className="h-3.5 w-3.5" /> Recolher</>}
@@ -153,16 +153,16 @@ export default function AppShell() {
 
       {/* MAIN */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 h-16 border-b border-black/10 bg-white/70 backdrop-blur-xl flex items-center px-6 gap-4">
-          <div className="overline text-black/50 hidden sm:block">{activeModule}</div>
+        <header className="sticky top-0 z-30 h-16 border-b border-white/5 bg-[#08090A]/80 backdrop-blur-xl flex items-center px-6 gap-4">
+          <div className="overline text-zinc-500 hidden sm:block">{activeModule}</div>
           <button
             onClick={() => setPaletteOpen(true)}
             data-testid="open-command-palette"
-            className="ml-auto flex items-center gap-2 h-9 px-3 rounded-md border border-black/10 bg-white hover:bg-black/5 text-sm text-black/60 transition-colors w-full max-w-md"
+            className="ml-auto flex items-center gap-2 h-9 px-3 rounded-md border border-white/10 bg-[#121214] hover:bg-white/5 text-sm text-zinc-400 transition-colors w-full max-w-md"
           >
             <Search className="h-4 w-4" strokeWidth={1.7} />
             <span className="flex-1 text-left">Buscar ou executar ação…</span>
-            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-black/15 text-black/60 flex items-center gap-0.5">
+            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-white/15 text-zinc-400 flex items-center gap-0.5">
               <Command className="h-3 w-3" /> K
             </kbd>
           </button>
@@ -170,7 +170,7 @@ export default function AppShell() {
           <Button
             data-testid="open-copilot-top"
             variant="outline"
-            className="h-9 rounded-md border-black/10 gap-2"
+            className="h-9 rounded-md border-white/10 gap-2"
             onClick={() => setCopilotOpen(true)}
           >
             <Sparkles className="h-4 w-4" />
@@ -214,7 +214,7 @@ function NotificationBell({ onOpenTask }) {
       <PopoverTrigger asChild>
         <button
           data-testid="notif-bell"
-          className="relative h-9 w-9 rounded-md border border-black/10 hover:bg-black/5 flex items-center justify-center"
+          className="relative h-9 w-9 rounded-md border border-white/10 hover:bg-white/5 flex items-center justify-center"
           aria-label="Notificações"
         >
           <Bell className="h-4 w-4" />
@@ -226,21 +226,21 @@ function NotificationBell({ onOpenTask }) {
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end" data-testid="notif-popover">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
           <div className="text-sm font-medium">Notificações</div>
-          {unread > 0 && <button onClick={readAll} className="text-xs text-black/50 hover:text-black" data-testid="notif-read-all">Marcar todas</button>}
+          {unread > 0 && <button onClick={readAll} className="text-xs text-zinc-500 hover:text-white" data-testid="notif-read-all">Marcar todas</button>}
         </div>
         <div className="max-h-80 overflow-y-auto">
-          {items.length === 0 && <div className="p-8 text-center text-xs text-black/40">Sem notificações</div>}
+          {items.length === 0 && <div className="p-8 text-center text-xs text-zinc-500">Sem notificações</div>}
           {items.map((n) => (
             <button
               key={n.notif_id}
               onClick={() => readOne(n)}
               data-testid={`notif-item-${n.notif_id}`}
-              className={`w-full text-left px-4 py-3 border-b border-black/5 hover:bg-black/[0.03] ${!n.read ? "bg-blue-50/40" : ""}`}
+              className={`w-full text-left px-4 py-3 border-b border-white/5 hover:bg-white/[0.03] ${!n.read ? "bg-blue-50/40" : ""}`}
             >
-              <div className="text-sm text-black/80">{n.body}</div>
-              <div className="text-[10px] text-black/40 mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
+              <div className="text-sm text-zinc-200">{n.body}</div>
+              <div className="text-[10px] text-zinc-500 mt-1">{new Date(n.created_at).toLocaleString("pt-BR")}</div>
             </button>
           ))}
         </div>

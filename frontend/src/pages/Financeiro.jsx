@@ -42,11 +42,11 @@ export default function Financeiro() {
     <div className="space-y-8 fade-up" data-testid="financeiro-page">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <div className="overline text-black/50">Financeiro</div>
+          <div className="overline text-zinc-500">Financeiro</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">Fluxo de caixa.</h1>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="new-tx-btn"><Plus className="h-4 w-4 mr-2" />Novo lançamento</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="h-10 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="new-tx-btn"><Plus className="h-4 w-4 mr-2" />Novo lançamento</Button></DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader><DialogTitle>Novo lançamento</DialogTitle></DialogHeader>
             <form onSubmit={create} className="space-y-4 pt-2">
@@ -61,7 +61,7 @@ export default function Financeiro() {
                   <SelectContent><SelectItem value="receita">Receita</SelectItem><SelectItem value="despesa">Despesa</SelectItem></SelectContent>
                 </Select>
               </div>
-              <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-tx">Salvar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-tx">Salvar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
@@ -69,10 +69,10 @@ export default function Financeiro() {
 
       {/* Big north star */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-1 rounded-md border border-black/10 bg-white p-6">
-          <div className="overline text-black/50">Saldo do período</div>
+        <div className="lg:col-span-1 rounded-md border border-white/10 bg-[#121214] p-6">
+          <div className="overline text-zinc-500">Saldo do período</div>
           <div className="font-display text-5xl font-light mt-3 tracking-tight">{brl(data.saldo)}</div>
-          <div className="mt-4 space-y-2 pt-4 border-t border-black/10">
+          <div className="mt-4 space-y-2 pt-4 border-t border-white/10">
             <div className="flex items-center justify-between text-sm">
               <div className="flex items-center gap-2 text-emerald-700"><TrendingUp className="h-4 w-4" />Receita</div>
               <div className="font-mono">{brl(data.receita)}</div>
@@ -84,8 +84,8 @@ export default function Financeiro() {
           </div>
         </div>
 
-        <div className="lg:col-span-2 rounded-md border border-black/10 bg-white p-6">
-          <div className="overline text-black/50">Movimentação</div>
+        <div className="lg:col-span-2 rounded-md border border-white/10 bg-[#121214] p-6">
+          <div className="overline text-zinc-500">Movimentação</div>
           <div className="h-64 mt-2">
             <ResponsiveContainer>
               <AreaChart data={series} margin={{ top: 10, right: 8, bottom: 0, left: -10 }}>
@@ -111,8 +111,8 @@ export default function Financeiro() {
         </div>
       </div>
 
-      <div className="rounded-md border border-black/10 bg-white overflow-hidden">
-        <div className="p-4 border-b border-black/10 overline text-black/50">Lançamentos recentes</div>
+      <div className="rounded-md border border-white/10 bg-[#121214] overflow-hidden">
+        <div className="p-4 border-b border-white/10 overline text-zinc-500">Lançamentos recentes</div>
         <Table>
           <TableHeader>
             <TableRow>
@@ -137,7 +137,7 @@ export default function Financeiro() {
                   {t.kind === "despesa" ? "- " : ""}{brl(t.amount)}
                 </TableCell>
                 <TableCell className="w-10">
-                  <button data-testid={`del-tx-${t.tx_id}`} onClick={() => del(t.tx_id)} className="text-black/40 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                  <button data-testid={`del-tx-${t.tx_id}`} onClick={() => del(t.tx_id)} className="text-zinc-500 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
                 </TableCell>
               </TableRow>
             ))}

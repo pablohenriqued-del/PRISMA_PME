@@ -72,12 +72,12 @@ export default function Automacoes() {
     <div className="space-y-8 fade-up" data-testid="automacoes-page">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <div className="overline text-black/50">Automações</div>
+          <div className="overline text-zinc-500">Automações</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">O trabalho invisível.</h1>
-          <p className="text-black/60 mt-2 text-sm max-w-lg">Regras que rodam por você. Testadas com WhatsApp real (Twilio) e e-mail (Resend).</p>
+          <p className="text-zinc-400 mt-2 text-sm max-w-lg">Regras que rodam por você. Testadas com WhatsApp real (Twilio) e e-mail (Resend).</p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="new-auto-btn"><Plus className="h-4 w-4 mr-2" />Nova automação</Button></DialogTrigger>
+          <DialogTrigger asChild><Button className="h-10 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="new-auto-btn"><Plus className="h-4 w-4 mr-2" />Nova automação</Button></DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader><DialogTitle>Nova automação</DialogTitle></DialogHeader>
             <form onSubmit={create} className="space-y-4 pt-2">
@@ -102,69 +102,69 @@ export default function Automacoes() {
                 <Label>Mensagem / template (opcional)</Label>
                 <Textarea data-testid="auto-template" rows={3} placeholder="Deixe em branco para usar o texto padrão" value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value })} />
               </div>
-              <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-auto">Ativar</Button></DialogFooter>
+              <DialogFooter><Button type="submit" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-auto">Ativar</Button></DialogFooter>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
       <Tabs defaultValue="rules">
-        <TabsList className="bg-transparent p-0 gap-1 border-b border-black/10 rounded-none w-full justify-start h-auto">
+        <TabsList className="bg-transparent p-0 gap-1 border-b border-white/10 rounded-none w-full justify-start h-auto">
           <TabsTrigger value="rules" data-testid="tab-rules" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[hsl(var(--ink))] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4">Regras</TabsTrigger>
           <TabsTrigger value="runs" data-testid="tab-runs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-[hsl(var(--ink))] data-[state=active]:bg-transparent data-[state=active]:shadow-none px-4">Execuções · {runs.length}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="rules" className="mt-6 space-y-3">
           {items.map((a) => (
-            <div key={a.auto_id} className="rounded-md border border-black/10 bg-white p-5 flex items-center gap-5" data-testid={`auto-${a.auto_id}`}>
+            <div key={a.auto_id} className="rounded-md border border-white/10 bg-[#121214] p-5 flex items-center gap-5" data-testid={`auto-${a.auto_id}`}>
               <div className="h-10 w-10 rounded-md flex items-center justify-center" style={{ background: a.active ? "hsl(32 95% 55% / 0.3)" : "hsl(220 13% 91%)" }}>
                 <Zap className="h-5 w-5" strokeWidth={1.6} />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-display font-medium">{a.name}</div>
-                <div className="mt-1 flex items-center gap-2 text-xs text-black/60 flex-wrap">
-                  <span className="px-2 py-0.5 rounded bg-black/5 font-mono">{LABEL(TRIGGERS, a.trigger)}</span>
+                <div className="mt-1 flex items-center gap-2 text-xs text-zinc-400 flex-wrap">
+                  <span className="px-2 py-0.5 rounded bg-[#121214]/5 font-mono">{LABEL(TRIGGERS, a.trigger)}</span>
                   <ArrowRight className="h-3 w-3" />
-                  <span className="px-2 py-0.5 rounded bg-black/5 font-mono">{LABEL(ACTIONS, a.action)}</span>
-                  {a.target && <span className="text-black/40">→ {a.target}</span>}
+                  <span className="px-2 py-0.5 rounded bg-[#121214]/5 font-mono">{LABEL(ACTIONS, a.action)}</span>
+                  {a.target && <span className="text-zinc-500">→ {a.target}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-right">
-                  <div className="text-[10px] uppercase tracking-widest text-black/50">Execuções</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">Execuções</div>
                   <div className="font-mono text-sm">{a.runs || 0}</div>
                 </div>
-                <Button size="sm" variant="outline" className="h-8 border-black/10" onClick={() => test(a.auto_id)} data-testid={`test-auto-${a.auto_id}`}>
+                <Button size="sm" variant="outline" className="h-8 border-white/10" onClick={() => test(a.auto_id)} data-testid={`test-auto-${a.auto_id}`}>
                   <Play className="h-3 w-3 mr-1" /> Testar
                 </Button>
-                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-black/10" onClick={() => setEditing({ ...a })} data-testid={`edit-auto-${a.auto_id}`}>
+                <Button size="sm" variant="outline" className="h-8 w-8 p-0 border-white/10" onClick={() => setEditing({ ...a })} data-testid={`edit-auto-${a.auto_id}`}>
                   <Settings2 className="h-3.5 w-3.5" />
                 </Button>
                 <Switch checked={a.active} onCheckedChange={() => toggle(a)} data-testid={`toggle-auto-${a.auto_id}`} />
-                <button data-testid={`del-auto-${a.auto_id}`} onClick={() => del(a.auto_id)} className="text-black/40 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
+                <button data-testid={`del-auto-${a.auto_id}`} onClick={() => del(a.auto_id)} className="text-zinc-500 hover:text-red-600 transition-colors"><Trash2 className="h-4 w-4" /></button>
               </div>
             </div>
           ))}
-          {items.length === 0 && <div className="border border-dashed border-black/10 rounded-md p-10 text-center text-sm text-black/40">Sem automações</div>}
+          {items.length === 0 && <div className="border border-dashed border-white/10 rounded-md p-10 text-center text-sm text-zinc-500">Sem automações</div>}
         </TabsContent>
 
         <TabsContent value="runs" className="mt-6">
-          <div className="rounded-md border border-black/10 bg-white overflow-hidden">
+          <div className="rounded-md border border-white/10 bg-[#121214] overflow-hidden">
             {runs.length === 0 ? (
-              <div className="p-10 text-center text-sm text-black/40">Nenhuma execução ainda. Crie um lead ou clique em Testar.</div>
+              <div className="p-10 text-center text-sm text-zinc-500">Nenhuma execução ainda. Crie um lead ou clique em Testar.</div>
             ) : runs.map((r) => {
               const st = r?.result?.status || "unknown";
               const ok = st === "sent" || st === "created" || st === "notified";
               return (
-                <div key={r.run_id} className="px-5 py-4 border-b border-black/5 flex items-center gap-4" data-testid={`run-${r.run_id}`}>
+                <div key={r.run_id} className="px-5 py-4 border-b border-white/5 flex items-center gap-4" data-testid={`run-${r.run_id}`}>
                   <div className={`h-2 w-2 rounded-full ${ok ? "bg-emerald-500" : "bg-amber-500"}`} />
-                  <Activity className="h-3.5 w-3.5 text-black/40" />
+                  <Activity className="h-3.5 w-3.5 text-zinc-500" />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{LABEL(ACTIONS, r.action)}</div>
-                    <div className="text-xs text-black/50 truncate">Gatilho: {r.trigger} · {r?.context?.name || ""}</div>
+                    <div className="text-xs text-zinc-500 truncate">Gatilho: {r.trigger} · {r?.context?.name || ""}</div>
                   </div>
-                  <div className="text-xs font-mono text-black/60">{st}</div>
-                  <div className="text-[10px] font-mono text-black/40 hidden md:block">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
+                  <div className="text-xs font-mono text-zinc-400">{st}</div>
+                  <div className="text-[10px] font-mono text-zinc-500 hidden md:block">{new Date(r.created_at).toLocaleString("pt-BR")}</div>
                 </div>
               );
             })}
@@ -186,7 +186,7 @@ export default function Automacoes() {
                 <Label>Mensagem / template</Label>
                 <Textarea rows={4} value={editing.template || ""} onChange={(e) => setEditing({ ...editing, template: e.target.value })} data-testid="edit-template" />
               </div>
-              <DialogFooter><Button onClick={saveEdit} className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-edit">Salvar</Button></DialogFooter>
+              <DialogFooter><Button onClick={saveEdit} className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-edit">Salvar</Button></DialogFooter>
             </div>
           )}
         </DialogContent>

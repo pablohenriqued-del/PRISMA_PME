@@ -105,7 +105,7 @@ export default function Projetos() {
     <div className="space-y-8 fade-up" data-testid="projetos-page">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <div className="overline text-black/50">Projetos</div>
+          <div className="overline text-zinc-500">Projetos</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">Foco em execução.</h1>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -114,18 +114,18 @@ export default function Projetos() {
             <SelectContent>{projects.map((p) => <SelectItem key={p.project_id} value={p.project_id}>{p.name}</SelectItem>)}</SelectContent>
           </Select>
           <Dialog open={openNewProj} onOpenChange={setOpenNewProj}>
-            <DialogTrigger asChild><Button variant="outline" className="h-10 border-black/10" data-testid="new-project-btn"><Plus className="h-4 w-4 mr-2" />Projeto</Button></DialogTrigger>
+            <DialogTrigger asChild><Button variant="outline" className="h-10 border-white/10" data-testid="new-project-btn"><Plus className="h-4 w-4 mr-2" />Projeto</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader><DialogTitle>Novo projeto</DialogTitle></DialogHeader>
               <form onSubmit={createProject} className="space-y-4 pt-2">
                 <div><Label>Nome</Label><Input required data-testid="project-name" value={proj.name} onChange={(e) => setProj({ ...proj, name: e.target.value })} /></div>
                 <div><Label>Descrição</Label><Input data-testid="project-desc" value={proj.description} onChange={(e) => setProj({ ...proj, description: e.target.value })} /></div>
-                <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-project">Criar</Button></DialogFooter>
+                <DialogFooter><Button type="submit" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-project">Criar</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
           <Dialog open={openNewTask} onOpenChange={setOpenNewTask}>
-            <DialogTrigger asChild><Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" disabled={!active} data-testid="new-task-btn"><Plus className="h-4 w-4 mr-2" />Nova tarefa</Button></DialogTrigger>
+            <DialogTrigger asChild><Button className="h-10 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" disabled={!active} data-testid="new-task-btn"><Plus className="h-4 w-4 mr-2" />Nova tarefa</Button></DialogTrigger>
             <DialogContent className="sm:max-w-md">
               <DialogHeader><DialogTitle>Nova tarefa</DialogTitle></DialogHeader>
               <form onSubmit={createTask} className="space-y-4 pt-2">
@@ -138,7 +138,7 @@ export default function Projetos() {
                     <SelectContent>{COLS.map((c) => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
-                <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-task">Salvar</Button></DialogFooter>
+                <DialogFooter><Button type="submit" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-task">Salvar</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -150,15 +150,15 @@ export default function Projetos() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <div className="font-display text-2xl">{active.name}</div>
-              <div className="text-sm text-black/50">{active.description || "—"}</div>
+              <div className="text-sm text-zinc-500">{active.description || "—"}</div>
             </div>
-            <div className="inline-flex rounded-md border border-black/10 bg-white overflow-hidden" data-testid="view-switcher">
+            <div className="inline-flex rounded-md border border-white/10 bg-[#121214] overflow-hidden" data-testid="view-switcher">
               {VIEWS.map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setView(key)}
                   data-testid={`view-${key}`}
-                  className={`px-3 h-9 text-xs flex items-center gap-1.5 border-r border-black/5 last:border-r-0 ${view === key ? "bg-[#0A0A14] text-[#F5F1EA]" : "hover:bg-black/5"}`}
+                  className={`px-3 h-9 text-xs flex items-center gap-1.5 border-r border-white/5 last:border-r-0 ${view === key ? "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white" : "hover:bg-white/5"}`}
                 >
                   <Icon className="h-3.5 w-3.5" /> {label}
                 </button>
@@ -192,15 +192,15 @@ function KanbanView({ tasks, onDrop, openTask, toggleTimer }) {
       {COLS.map(({ key, label, icon: Icon, tint }) => {
         const col = tasks.filter((t) => t.status === key);
         return (
-          <div key={key} onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDrop(e, key)} className="rounded-md border border-black/10 bg-white flex flex-col min-h-[300px]" data-testid={`task-col-${key}`}>
-            <div className="p-3 border-b border-black/10 flex items-center gap-2" style={{ background: tint }}>
+          <div key={key} onDragOver={(e) => e.preventDefault()} onDrop={(e) => onDrop(e, key)} className="rounded-md border border-white/10 bg-[#121214] flex flex-col min-h-[300px]" data-testid={`task-col-${key}`}>
+            <div className="p-3 border-b border-white/10 flex items-center gap-2" style={{ background: tint }}>
               <Icon className="h-4 w-4" />
               <div className="font-display text-sm font-medium">{label}</div>
-              <div className="ml-auto text-[11px] font-mono text-black/60">{col.length}</div>
+              <div className="ml-auto text-[11px] font-mono text-zinc-400">{col.length}</div>
             </div>
             <div className="p-2 space-y-2 flex-1">
               {col.map((t) => <TaskCard key={t.task_id} t={t} openTask={openTask} toggleTimer={toggleTimer} />)}
-              {col.length === 0 && <div className="text-center text-xs text-black/40 border border-dashed border-black/10 rounded-md py-6">Sem tarefas</div>}
+              {col.length === 0 && <div className="text-center text-xs text-zinc-500 border border-dashed border-white/10 rounded-md py-6">Sem tarefas</div>}
             </div>
           </div>
         );
@@ -217,18 +217,18 @@ function TaskCard({ t, openTask, toggleTimer }) {
       draggable
       onDragStart={(e) => e.dataTransfer.setData("text/plain", t.task_id)}
       data-testid={`task-${t.task_id}`}
-      className={`rounded-md border p-3 bg-white hover:border-black/40 transition-colors cursor-grab active:cursor-grabbing ${running ? "border-emerald-400" : "border-black/10"}`}
+      className={`rounded-md border p-3 bg-[#121214] hover:border-white/20 transition-colors cursor-grab active:cursor-grabbing ${running ? "border-emerald-400" : "border-white/10"}`}
     >
       <div className="text-sm font-medium">{t.title}</div>
-      {t.assignee && <div className="text-xs text-black/50 mt-1">{t.assignee}</div>}
-      {t.due_date && <div className="text-[10px] text-black/50 mt-0.5">📅 {dtBR(t.due_date)}</div>}
+      {t.assignee && <div className="text-xs text-zinc-500 mt-1">{t.assignee}</div>}
+      {t.due_date && <div className="text-[10px] text-zinc-500 mt-0.5">📅 {dtBR(t.due_date)}</div>}
       <div className="mt-2 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1 text-[11px] text-black/60"><Timer className="h-3 w-3" />{fmtSec(secs)}</div>
+        <div className="flex items-center gap-1 text-[11px] text-zinc-400"><Timer className="h-3 w-3" />{fmtSec(secs)}</div>
         <div className="flex gap-1">
-          <button onClick={(e) => { e.stopPropagation(); toggleTimer(t); }} data-testid={`timer-${t.task_id}`} className={`h-7 w-7 rounded-md flex items-center justify-center ${running ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-black/5 hover:bg-black/10"}`}>
+          <button onClick={(e) => { e.stopPropagation(); toggleTimer(t); }} data-testid={`timer-${t.task_id}`} className={`h-7 w-7 rounded-md flex items-center justify-center ${running ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-[#121214]/5 hover:bg-white/10"}`}>
             {running ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />}
           </button>
-          <button onClick={(e) => { e.stopPropagation(); openTask(t); }} data-testid={`open-task-${t.task_id}`} className="h-7 w-7 rounded-md bg-black/5 hover:bg-black/10 flex items-center justify-center">
+          <button onClick={(e) => { e.stopPropagation(); openTask(t); }} data-testid={`open-task-${t.task_id}`} className="h-7 w-7 rounded-md bg-[#121214]/5 hover:bg-white/10 flex items-center justify-center">
             <Plus className="h-3 w-3 rotate-45" />
           </button>
         </div>
@@ -240,10 +240,10 @@ function TaskCard({ t, openTask, toggleTimer }) {
 /* ---------- LIST VIEW ---------- */
 function ListView({ tasks, move, openTask, toggleTimer }) {
   return (
-    <div className="rounded-md border border-black/10 bg-white overflow-hidden" data-testid="list-view">
+    <div className="rounded-md border border-white/10 bg-[#121214] overflow-hidden" data-testid="list-view">
       <table className="w-full text-sm">
-        <thead className="bg-black/[0.03]">
-          <tr className="text-left text-[10px] uppercase tracking-widest text-black/50">
+        <thead className="bg-[#121214]/[0.03]">
+          <tr className="text-left text-[10px] uppercase tracking-widest text-zinc-500">
             <th className="p-3 font-medium">Tarefa</th>
             <th className="p-3 font-medium">Responsável</th>
             <th className="p-3 font-medium">Status</th>
@@ -253,15 +253,15 @@ function ListView({ tasks, move, openTask, toggleTimer }) {
           </tr>
         </thead>
         <tbody>
-          {tasks.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-black/40">Sem tarefas</td></tr>}
+          {tasks.length === 0 && <tr><td colSpan={6} className="p-10 text-center text-zinc-500">Sem tarefas</td></tr>}
           {tasks.map((t) => {
             const running = !!activeLog(t);
             return (
-              <tr key={t.task_id} className="border-t border-black/5 hover:bg-black/[0.02]" data-testid={`list-row-${t.task_id}`}>
+              <tr key={t.task_id} className="border-t border-white/5 hover:bg-white/[0.02]" data-testid={`list-row-${t.task_id}`}>
                 <td className="p-3">
                   <button onClick={() => openTask(t)} className="text-left hover:underline">{t.title}</button>
                 </td>
-                <td className="p-3 text-xs text-black/70">{t.assignee || "—"}</td>
+                <td className="p-3 text-xs text-zinc-300">{t.assignee || "—"}</td>
                 <td className="p-3">
                   <Select value={t.status} onValueChange={(v) => move(t, v)}>
                     <SelectTrigger className="h-7 w-[130px] text-[11px]"><SelectValue /></SelectTrigger>
@@ -270,11 +270,11 @@ function ListView({ tasks, move, openTask, toggleTimer }) {
                 </td>
                 <td className="p-3 text-xs">{dtBR(t.due_date)}</td>
                 <td className="p-3 text-xs">
-                  <button onClick={() => toggleTimer(t)} className={`inline-flex items-center gap-1 px-2 h-6 rounded ${running ? "bg-emerald-600 text-white" : "bg-black/5 hover:bg-black/10"}`}>
+                  <button onClick={() => toggleTimer(t)} className={`inline-flex items-center gap-1 px-2 h-6 rounded ${running ? "bg-emerald-600 text-white" : "bg-[#121214]/5 hover:bg-white/10"}`}>
                     {running ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />} {fmtSec(liveSeconds(t))}
                   </button>
                 </td>
-                <td className="p-3"><button onClick={() => openTask(t)} className="text-black/40 hover:text-black text-xs">Abrir</button></td>
+                <td className="p-3"><button onClick={() => openTask(t)} className="text-zinc-500 hover:text-white text-xs">Abrir</button></td>
               </tr>
             );
           })}
@@ -306,32 +306,32 @@ function CalendarView({ tasks, openTask }) {
   });
   const monthName = cursor.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
   return (
-    <div className="rounded-md border border-black/10 bg-white p-4" data-testid="calendar-view">
+    <div className="rounded-md border border-white/10 bg-[#121214] p-4" data-testid="calendar-view">
       <div className="flex items-center justify-between mb-4">
-        <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="h-8 w-8 rounded hover:bg-black/5" data-testid="cal-prev">‹</button>
+        <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="h-8 w-8 rounded hover:bg-white/5" data-testid="cal-prev">‹</button>
         <div className="font-display text-lg capitalize">{monthName}</div>
-        <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="h-8 w-8 rounded hover:bg-black/5" data-testid="cal-next">›</button>
+        <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="h-8 w-8 rounded hover:bg-white/5" data-testid="cal-next">›</button>
       </div>
-      <div className="grid grid-cols-7 gap-1 mb-2 text-[10px] uppercase tracking-widest text-black/40 text-center">
+      <div className="grid grid-cols-7 gap-1 mb-2 text-[10px] uppercase tracking-widest text-zinc-500 text-center">
         {["Seg","Ter","Qua","Qui","Sex","Sáb","Dom"].map((d) => <div key={d} className="py-1">{d}</div>)}
       </div>
       <div className="grid grid-cols-7 gap-1">
         {cells.map((d, i) => (
-          <div key={i} className={`min-h-[80px] rounded border ${d ? "border-black/5 bg-white" : "border-transparent"} p-1.5`}>
+          <div key={i} className={`min-h-[80px] rounded border ${d ? "border-white/5 bg-[#121214]" : "border-transparent"} p-1.5`}>
             {d && (
               <>
-                <div className="text-[11px] text-black/50 mb-1">{d.getDate()}</div>
+                <div className="text-[11px] text-zinc-500 mb-1">{d.getDate()}</div>
                 <div className="space-y-0.5">
                   {(bucket.get(d.getDate()) || []).slice(0, 3).map((t) => (
                     <button key={t.task_id} onClick={() => openTask(t)} data-testid={`cal-task-${t.task_id}`}
                       className={`block w-full text-left text-[10px] px-1.5 py-1 rounded truncate ${
                         t.status === "concluido" ? "bg-emerald-50 text-emerald-800" :
-                        t.status === "em_progresso" ? "bg-amber-50 text-amber-800" : "bg-black/[0.06] text-black/70"
+                        t.status === "em_progresso" ? "bg-amber-50 text-amber-800" : "bg-[#121214]/[0.06] text-zinc-300"
                       } hover:opacity-80`}>
                       {t.title}
                     </button>
                   ))}
-                  {(bucket.get(d.getDate()) || []).length > 3 && <div className="text-[9px] text-black/40">+{bucket.get(d.getDate()).length - 3}</div>}
+                  {(bucket.get(d.getDate()) || []).length > 3 && <div className="text-[9px] text-zinc-500">+{bucket.get(d.getDate()).length - 3}</div>}
                 </div>
               </>
             )}
@@ -346,7 +346,7 @@ function CalendarView({ tasks, openTask }) {
 function GanttView({ tasks, openTask }) {
   const withDates = tasks.filter((t) => t.due_date && t.created_at);
   if (withDates.length === 0) {
-    return <div className="rounded-md border border-dashed border-black/10 bg-white p-10 text-center text-black/50" data-testid="gantt-empty">
+    return <div className="rounded-md border border-dashed border-white/10 bg-[#121214] p-10 text-center text-zinc-500" data-testid="gantt-empty">
       Adicione um prazo às tarefas para vê-las no Gantt.
     </div>;
   }
@@ -359,17 +359,17 @@ function GanttView({ tasks, openTask }) {
   const width = totalDays * colWidth;
   const days = Array.from({ length: totalDays }, (_, i) => new Date(startDate.getTime() + i * 86400000));
   return (
-    <div className="rounded-md border border-black/10 bg-white overflow-hidden" data-testid="gantt-view">
+    <div className="rounded-md border border-white/10 bg-[#121214] overflow-hidden" data-testid="gantt-view">
       <div className="overflow-x-auto">
         <div style={{ width: 260 + width }}>
           {/* Header */}
-          <div className="flex sticky top-0 bg-white z-10 border-b border-black/10">
-            <div className="w-[260px] shrink-0 p-3 text-[10px] uppercase tracking-widest text-black/50">Tarefa</div>
+          <div className="flex sticky top-0 bg-[#121214] z-10 border-b border-white/10">
+            <div className="w-[260px] shrink-0 p-3 text-[10px] uppercase tracking-widest text-zinc-500">Tarefa</div>
             <div className="flex">
               {days.map((d, i) => {
                 const isMonthStart = d.getDate() === 1 || i === 0;
                 return (
-                  <div key={i} className={`text-center text-[10px] py-2 border-l border-black/5 ${isMonthStart ? "font-medium text-black" : "text-black/40"}`} style={{ width: colWidth }}>
+                  <div key={i} className={`text-center text-[10px] py-2 border-l border-white/5 ${isMonthStart ? "font-medium text-white" : "text-zinc-500"}`} style={{ width: colWidth }}>
                     {isMonthStart ? d.toLocaleDateString("pt-BR", { month: "short" }) : d.getDate()}
                   </div>
                 );
@@ -382,12 +382,12 @@ function GanttView({ tasks, openTask }) {
             const e = new Date(t.due_date).getTime();
             const startOffset = Math.max(0, Math.floor((s - startDate.getTime()) / 86400000));
             const durDays = Math.max(1, daysBetween(new Date(Math.max(s, startDate.getTime())), new Date(Math.max(e, s + 86400000))));
-            const barColor = t.status === "concluido" ? "bg-emerald-500" : t.status === "em_progresso" ? "bg-amber-500" : "bg-[#0A0A14]";
+            const barColor = t.status === "concluido" ? "bg-emerald-500" : t.status === "em_progresso" ? "bg-amber-500" : "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6]";
             return (
-              <div key={t.task_id} className="flex border-b border-black/5 hover:bg-black/[0.02]" data-testid={`gantt-row-${t.task_id}`}>
+              <div key={t.task_id} className="flex border-b border-white/5 hover:bg-white/[0.02]" data-testid={`gantt-row-${t.task_id}`}>
                 <button onClick={() => openTask(t)} className="w-[260px] shrink-0 p-3 text-left text-sm truncate hover:underline">{t.title}</button>
                 <div className="relative flex" style={{ width }}>
-                  {days.map((_, i) => <div key={i} className="border-l border-black/5" style={{ width: colWidth }} />)}
+                  {days.map((_, i) => <div key={i} className="border-l border-white/5" style={{ width: colWidth }} />)}
                   <button
                     onClick={() => openTask(t)}
                     data-testid={`gantt-bar-${t.task_id}`}
@@ -496,29 +496,29 @@ function TaskDetail({ task, members, onClose, onSaved }) {
         <DialogHeader><DialogTitle>{task.title}</DialogTitle><DialogDescription>Comentários, tempo e campos personalizados.</DialogDescription></DialogHeader>
         <div className="pt-2 space-y-5">
           {/* Time */}
-          <div className="rounded-md border border-black/10 p-3">
+          <div className="rounded-md border border-white/10 p-3">
             <div className="flex items-center justify-between mb-2 text-sm">
-              <div className="flex items-center gap-2 text-black/70"><Timer className="h-4 w-4" /> Tempo total</div>
+              <div className="flex items-center gap-2 text-zinc-300"><Timer className="h-4 w-4" /> Tempo total</div>
               <div className="font-mono">{fmtSec(task.total_seconds || 0)}</div>
             </div>
             <div className="flex items-center gap-2">
               <Input type="number" placeholder="min" value={manualMin} onChange={(e) => setManualMin(e.target.value)} className="h-9 flex-1" data-testid="manual-min" />
-              <Button size="sm" onClick={addManualTime} className="h-9 bg-[hsl(var(--ink))] text-[hsl(var(--paper))]" data-testid="add-manual-time">+ Lançar</Button>
+              <Button size="sm" onClick={addManualTime} className="h-9 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white" data-testid="add-manual-time">+ Lançar</Button>
             </div>
           </div>
 
           {/* Comments */}
           <div>
-            <div className="flex items-center gap-2 mb-2 text-sm text-black/70"><MessageSquare className="h-4 w-4" /> Comentários ({comments.length})</div>
+            <div className="flex items-center gap-2 mb-2 text-sm text-zinc-300"><MessageSquare className="h-4 w-4" /> Comentários ({comments.length})</div>
             <div className="space-y-3 max-h-72 overflow-y-auto" data-testid="comments-list">
-              {comments.length === 0 && <div className="text-xs text-black/40">Sem comentários ainda. Use <code>@nome</code> para marcar alguém.</div>}
+              {comments.length === 0 && <div className="text-xs text-zinc-500">Sem comentários ainda. Use <code>@nome</code> para marcar alguém.</div>}
               {comments.map((c) => (
-                <div key={c.comment_id} className="rounded-md border border-black/10 p-3 bg-white" data-testid={`comment-${c.comment_id}`}>
+                <div key={c.comment_id} className="rounded-md border border-white/10 p-3 bg-[#121214]" data-testid={`comment-${c.comment_id}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <div className="text-xs"><b>{c.author_name}</b> <span className="text-black/40">· {new Date(c.created_at).toLocaleString("pt-BR")}</span></div>
-                    <button onClick={() => deleteComment(c)} className="text-black/30 hover:text-red-600" data-testid={`del-comment-${c.comment_id}`}><Trash2 className="h-3 w-3" /></button>
+                    <div className="text-xs"><b>{c.author_name}</b> <span className="text-zinc-500">· {new Date(c.created_at).toLocaleString("pt-BR")}</span></div>
+                    <button onClick={() => deleteComment(c)} className="text-zinc-600 hover:text-red-600" data-testid={`del-comment-${c.comment_id}`}><Trash2 className="h-3 w-3" /></button>
                   </div>
-                  <div className="text-sm text-black/80 whitespace-pre-wrap">{renderBody(c.body)}</div>
+                  <div className="text-sm text-zinc-200 whitespace-pre-wrap">{renderBody(c.body)}</div>
                 </div>
               ))}
             </div>
@@ -531,25 +531,25 @@ function TaskDetail({ task, members, onClose, onSaved }) {
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey && !showSuggest) { e.preventDefault(); sendComment(e); } }}
                 placeholder="Escreva um comentário. Digite @ para mencionar…"
                 rows={2}
-                className="w-full rounded-md border border-black/15 p-2 text-sm resize-none"
+                className="w-full rounded-md border border-white/15 p-2 text-sm resize-none"
               />
               {showSuggest && filtered.length > 0 && (
-                <div className="absolute left-0 bottom-14 z-20 rounded-md border border-black/10 bg-white shadow-lg w-72 max-h-56 overflow-y-auto" data-testid="mention-suggest">
+                <div className="absolute left-0 bottom-14 z-20 rounded-md border border-white/10 bg-[#121214] shadow-lg w-72 max-h-56 overflow-y-auto" data-testid="mention-suggest">
                   {filtered.map((u) => (
                     <button
                       key={u.user_id} type="button" onClick={() => insertMention(u)}
                       data-testid={`mention-${u.user_id}`}
-                      className="w-full text-left px-3 py-2 hover:bg-black/5 flex items-center gap-2 text-sm"
+                      className="w-full text-left px-3 py-2 hover:bg-white/5 flex items-center gap-2 text-sm"
                     >
-                      <AtSign className="h-3 w-3 text-black/40" />
+                      <AtSign className="h-3 w-3 text-zinc-500" />
                       <span className="flex-1 truncate">{u.name}</span>
-                      <span className="text-xs text-black/40 truncate">{u.email}</span>
+                      <span className="text-xs text-zinc-500 truncate">{u.email}</span>
                     </button>
                   ))}
                 </div>
               )}
               <div className="mt-2 flex justify-end">
-                <Button size="sm" type="submit" data-testid="send-comment" className="h-9 bg-[hsl(var(--ink))] text-[hsl(var(--paper))]" disabled={!text.trim()}>
+                <Button size="sm" type="submit" data-testid="send-comment" className="h-9 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white" disabled={!text.trim()}>
                   <Send className="h-3.5 w-3.5 mr-1.5" /> Comentar
                 </Button>
               </div>
@@ -560,10 +560,10 @@ function TaskDetail({ task, members, onClose, onSaved }) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Campos personalizados</Label>
-              <button type="button" onClick={addField} className="text-xs text-black/60 hover:text-black flex items-center gap-1" data-testid="task-add-field"><Plus className="h-3 w-3" /> campo</button>
+              <button type="button" onClick={addField} className="text-xs text-zinc-400 hover:text-white flex items-center gap-1" data-testid="task-add-field"><Plus className="h-3 w-3" /> campo</button>
             </div>
             <div className="space-y-2">
-              {fields.length === 0 && <div className="text-xs text-black/40">Adicione campos para categorizar melhor essa tarefa.</div>}
+              {fields.length === 0 && <div className="text-xs text-zinc-500">Adicione campos para categorizar melhor essa tarefa.</div>}
               {fields.map((cf, i) => (
                 <div key={i} className="grid grid-cols-12 gap-2">
                   <Input className="col-span-4" placeholder="Nome" value={cf.name} onChange={(e) => setField(i, { name: e.target.value })} />
@@ -572,13 +572,13 @@ function TaskDetail({ task, members, onClose, onSaved }) {
                     <SelectContent>{FIELD_TYPES.map((t) => <SelectItem key={t.key} value={t.key}>{t.label}</SelectItem>)}</SelectContent>
                   </Select>
                   <Input className="col-span-4" type={cf.type === "date" ? "date" : cf.type === "number" ? "number" : "text"} placeholder="Valor" value={cf.value || ""} onChange={(e) => setField(i, { value: e.target.value })} />
-                  <button onClick={() => rmField(i)} className="col-span-1 text-black/40 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
+                  <button onClick={() => rmField(i)} className="col-span-1 text-zinc-500 hover:text-red-600"><Trash2 className="h-4 w-4" /></button>
                 </div>
               ))}
             </div>
           </div>
         </div>
-        <DialogFooter><Button disabled={saving} onClick={save} className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="save-task-detail">{saving ? "Salvando…" : "Salvar campos"}</Button></DialogFooter>
+        <DialogFooter><Button disabled={saving} onClick={save} className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="save-task-detail">{saving ? "Salvando…" : "Salvar campos"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

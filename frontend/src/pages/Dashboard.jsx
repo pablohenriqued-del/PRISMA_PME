@@ -32,14 +32,14 @@ export default function Dashboard() {
     <div className="space-y-10 fade-up" data-testid="dashboard-page">
       <div className="flex items-end justify-between gap-6 flex-wrap">
         <div>
-          <div className="overline text-black/50">Visão geral · fevereiro</div>
+          <div className="overline text-zinc-500">Visão geral · fevereiro</div>
           <h1 className="font-display font-light text-5xl tracking-tight mt-2">
             Olá — <span className="font-medium">seu negócio hoje.</span>
           </h1>
-          <p className="text-black/60 mt-2 max-w-xl">Um mapa vivo do que está acontecendo. Toque em um bloco para aprofundar.</p>
+          <p className="text-zinc-400 mt-2 max-w-xl">Um mapa vivo do que está acontecendo. Toque em um bloco para aprofundar.</p>
         </div>
         <div className="text-right">
-          <div className="overline text-black/50">Saldo do mês</div>
+          <div className="overline text-zinc-500">Saldo do mês</div>
           <div className="font-display text-4xl tracking-tight mt-1">{brl(k.saldo)}</div>
           <div className={`inline-flex items-center gap-1 text-xs mt-1 ${k.saldo >= 0 ? "text-emerald-700" : "text-red-700"}`}>
             {k.saldo >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
@@ -58,13 +58,13 @@ export default function Dashboard() {
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 rounded-md border border-black/10 bg-white p-6">
+        <div className="lg:col-span-2 rounded-md border border-white/10 bg-[#121214] p-6">
           <div className="flex items-center justify-between">
             <div>
-              <div className="overline text-black/50">Receita por dia</div>
+              <div className="overline text-zinc-500">Receita por dia</div>
               <div className="font-display text-2xl mt-1">{brl(k.receita)}</div>
             </div>
-            <div className="text-xs text-black/50">últimos lançamentos</div>
+            <div className="text-xs text-zinc-500">últimos lançamentos</div>
           </div>
           <div className="h-64 mt-4">
             <ResponsiveContainer>
@@ -79,8 +79,8 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="rounded-md border border-black/10 bg-white p-6">
-          <div className="overline text-black/50">Pipeline CRM</div>
+        <div className="rounded-md border border-white/10 bg-[#121214] p-6">
+          <div className="overline text-zinc-500">Pipeline CRM</div>
           <div className="font-display text-2xl mt-1">{k.leads} leads</div>
           <div className="h-64 mt-4">
             <ResponsiveContainer>
@@ -108,23 +108,23 @@ export default function Dashboard() {
 
 function KPI({ icon: Icon, label, value, hint, accent }) {
   return (
-    <div className="group rounded-md border border-black/10 bg-white p-5 hover:border-black/40 transition-colors relative overflow-hidden" data-testid={`kpi-${label.toLowerCase().replace(/\s+/g,"-")}`}>
+    <div className="group rounded-md border border-white/10 bg-[#121214] p-5 hover:border-white/20 transition-colors relative overflow-hidden" data-testid={`kpi-${label.toLowerCase().replace(/\s+/g,"-")}`}>
       <div className="absolute top-0 left-0 h-1 w-full" style={{ background: `hsl(${accent})` }} />
       <div className="flex items-center justify-between">
-        <div className="overline text-black/50">{label}</div>
-        <Icon className="h-4 w-4 text-black/40" strokeWidth={1.6} />
+        <div className="overline text-zinc-500">{label}</div>
+        <Icon className="h-4 w-4 text-zinc-500" strokeWidth={1.6} />
       </div>
       <div className="font-display text-3xl font-light mt-3 tracking-tight">{value}</div>
-      <div className="text-xs text-black/50 mt-1">{hint}</div>
+      <div className="text-xs text-zinc-500 mt-1">{hint}</div>
     </div>
   );
 }
 function MiniKPI({ icon: Icon, label, value }) {
   return (
-    <div className="rounded-md border border-black/10 bg-white p-4 flex items-center gap-3">
-      <Icon className="h-4 w-4 text-black/50" strokeWidth={1.6} />
+    <div className="rounded-md border border-white/10 bg-[#121214] p-4 flex items-center gap-3">
+      <Icon className="h-4 w-4 text-zinc-500" strokeWidth={1.6} />
       <div className="min-w-0">
-        <div className="text-[10px] uppercase tracking-widest text-black/50">{label}</div>
+        <div className="text-[10px] uppercase tracking-widest text-zinc-500">{label}</div>
         <div className="font-display text-lg leading-none mt-1 truncate">{value}</div>
       </div>
     </div>

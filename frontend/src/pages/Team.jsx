@@ -53,14 +53,14 @@ export default function Team() {
     <div className="space-y-8 fade-up" data-testid="team-page">
       <div className="flex items-end justify-between flex-wrap gap-4">
         <div>
-          <div className="overline text-black/50">Equipe</div>
+          <div className="overline text-zinc-500">Equipe</div>
           <h1 className="font-display text-4xl font-light tracking-tight mt-2">Sua turma.</h1>
-          <p className="text-black/60 mt-2 text-sm">Convide colegas por e-mail — eles entram automaticamente na sua organização ao fazer login.</p>
+          <p className="text-zinc-400 mt-2 text-sm">Convide colegas por e-mail — eles entram automaticamente na sua organização ao fazer login.</p>
         </div>
         {canInvite && (
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button className="h-10 bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="invite-btn">
+              <Button className="h-10 bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="invite-btn">
                 <UserPlus className="h-4 w-4 mr-2" /> Convidar membro
               </Button>
             </DialogTrigger>
@@ -79,16 +79,16 @@ export default function Team() {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-black/50 leading-relaxed">Um e-mail de convite será enviado. Quando essa pessoa fizer login com Google usando o mesmo e-mail, entra automaticamente aqui.</p>
-                <DialogFooter><Button type="submit" className="bg-[hsl(var(--ink))] hover:bg-black text-[hsl(var(--paper))]" data-testid="send-invite">Enviar convite</Button></DialogFooter>
+                <p className="text-xs text-zinc-500 leading-relaxed">Um e-mail de convite será enviado. Quando essa pessoa fizer login com Google usando o mesmo e-mail, entra automaticamente aqui.</p>
+                <DialogFooter><Button type="submit" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white" data-testid="send-invite">Enviar convite</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
         )}
       </div>
 
-      <div className="rounded-md border border-black/10 bg-white overflow-hidden">
-        <div className="px-5 py-4 border-b border-black/10 overline text-black/50">Membros ativos · {members.length}</div>
+      <div className="rounded-md border border-white/10 bg-[#121214] overflow-hidden">
+        <div className="px-5 py-4 border-b border-white/10 overline text-zinc-500">Membros ativos · {members.length}</div>
         <div className="divide-y divide-black/5">
           {members.map((m) => {
             const R = ROLE_MAP[m.role] || ROLE_MAP.comercial;
@@ -99,8 +99,8 @@ export default function Team() {
                   <AvatarFallback>{m.name?.[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">{m.name} {m.user_id === user?.user_id && <span className="text-xs text-black/40">(você)</span>}</div>
-                  <div className="text-xs text-black/50">{m.email}</div>
+                  <div className="font-medium">{m.name} {m.user_id === user?.user_id && <span className="text-xs text-zinc-500">(você)</span>}</div>
+                  <div className="text-xs text-zinc-500">{m.email}</div>
                 </div>
                 <div className="flex items-center gap-2 px-2.5 py-1 rounded-md" style={{ background: R.color }}>
                   <R.icon className="h-3.5 w-3.5" />
@@ -119,18 +119,18 @@ export default function Team() {
       </div>
 
       {invites.length > 0 && (
-        <div className="rounded-md border border-dashed border-black/15 bg-white overflow-hidden">
-          <div className="px-5 py-4 border-b border-black/10 overline text-black/50">Convites pendentes · {invites.length}</div>
+        <div className="rounded-md border border-dashed border-white/15 bg-[#121214] overflow-hidden">
+          <div className="px-5 py-4 border-b border-white/10 overline text-zinc-500">Convites pendentes · {invites.length}</div>
           <div className="divide-y divide-black/5">
             {invites.map((i) => (
               <div key={i.invite_id} className="px-5 py-4 flex items-center gap-4" data-testid={`invite-${i.invite_id}`}>
-                <div className="h-10 w-10 rounded-md bg-black/5 flex items-center justify-center"><Mail className="h-4 w-4" /></div>
+                <div className="h-10 w-10 rounded-md bg-[#121214]/5 flex items-center justify-center"><Mail className="h-4 w-4" /></div>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm">{i.email}</div>
-                  <div className="text-xs text-black/50">Convite como {ROLE_MAP[i.role]?.l || i.role} · aguardando login</div>
+                  <div className="text-xs text-zinc-500">Convite como {ROLE_MAP[i.role]?.l || i.role} · aguardando login</div>
                 </div>
                 {canInvite && (
-                  <button onClick={() => cancel(i.invite_id)} data-testid={`cancel-${i.invite_id}`} className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-black/5 text-black/40 hover:text-red-600 transition-colors">
+                  <button onClick={() => cancel(i.invite_id)} data-testid={`cancel-${i.invite_id}`} className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-white/5 text-zinc-500 hover:text-red-600 transition-colors">
                     <X className="h-4 w-4" />
                   </button>
                 )}

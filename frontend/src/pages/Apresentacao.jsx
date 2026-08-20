@@ -55,7 +55,7 @@ const TESTIMONIALS = [
 ];
 
 const Logo = ({ className = "h-8 w-8" }) => (
-  <div className={`${className} rounded-md bg-[#0A0A14] flex items-center justify-center shrink-0`}>
+  <div className={`${className} rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] flex items-center justify-center shrink-0`}>
     <svg viewBox="0 0 44 44" fill="none" className="w-2/3 h-2/3">
       <path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" stroke="#F5F1EA" strokeWidth="1" strokeLinejoin="round" />
     </svg>
@@ -79,18 +79,18 @@ export default function Apresentacao() {
   useEffect(() => { document.title = "Prisma · Apresentação"; }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F1EA] text-[#0A0A14] antialiased" data-testid="apresentacao-page">
+    <div className="min-h-screen bg-[#08090A] text-white antialiased" data-testid="apresentacao-page">
       {/* Reading progress bar */}
-      <motion.div style={{ width: barWidth }} className="fixed top-0 left-0 h-[2px] bg-[#0A0A14] z-50 print:hidden" />
+      <motion.div style={{ width: barWidth }} className="fixed top-0 left-0 h-[2px] bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] z-50 print:hidden" />
 
       {/* Sticky top bar (hidden on print) */}
-      <nav className="sticky top-0 z-40 backdrop-blur-xl bg-[#F5F1EA]/80 border-b border-black/10 print:hidden">
+      <nav className="sticky top-0 z-40 backdrop-blur-xl bg-[#08090A]/80 border-b border-white/10 print:hidden">
         <div className="max-w-6xl mx-auto px-6 md:px-10 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo className="h-8 w-8" />
             <div>
               <div className="italic text-base leading-none" style={{ fontFamily: "'Fraunces', serif" }}>Prisma</div>
-              <div className="text-[10px] uppercase tracking-widest text-black/50 mt-0.5">apresentação · {dt}</div>
+              <div className="text-[10px] uppercase tracking-widest text-zinc-500 mt-0.5">apresentação · {dt}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -99,21 +99,21 @@ export default function Apresentacao() {
               target="_blank"
               rel="noopener"
               data-testid="download-pdf-btn"
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md bg-[#0A0A14] text-[#F5F1EA] hover:bg-black text-xs"
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white hover:opacity-90 text-xs"
             >
               <Download className="h-3.5 w-3.5" /> Baixar PDF one-page
             </a>
             <button
               onClick={() => window.print()}
               data-testid="print-btn"
-              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-black/10 bg-white hover:bg-black/5 text-xs"
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-white/10 bg-[#121214] hover:bg-white/5 text-xs"
             >
               <Printer className="h-3.5 w-3.5" /> Imprimir esta página
             </button>
             <Link
               to="/login"
               data-testid="try-btn"
-              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-[#0A0A14] text-[#F5F1EA] text-xs hover:bg-black"
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white text-xs hover:opacity-90"
             >
               Testar grátis <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -125,7 +125,7 @@ export default function Apresentacao() {
       <Section className="pt-16 md:pt-24 pb-20 md:pb-32">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
           <div className="lg:col-span-7">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="inline-flex items-center gap-2 px-3 h-7 rounded-full border border-black/10 bg-white/60 text-[11px] uppercase tracking-widest text-black/60">
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} className="inline-flex items-center gap-2 px-3 h-7 rounded-full border border-white/10 bg-[#121214]/[0.02] text-[11px] uppercase tracking-widest text-zinc-400">
               <Sparkles className="h-3 w-3" /> Software brasileiro · pt-BR · PIX nativo
             </motion.div>
             <motion.h1
@@ -137,19 +137,19 @@ export default function Apresentacao() {
             </motion.h1>
             <motion.p
               initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={2}
-              className="mt-6 text-lg md:text-xl text-black/70 max-w-2xl leading-relaxed"
+              className="mt-6 text-lg md:text-xl text-zinc-300 max-w-2xl leading-relaxed"
             >
               CRM, WhatsApp, Ordem de Serviço, Financeiro, Projetos e IA em um só painel.
               Do primeiro contato ao PIX cair, sem trocar de aba.
             </motion.p>
             <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUp} custom={3} className="mt-10 flex items-center gap-3 flex-wrap">
-              <Link to="/login" data-testid="hero-cta" className="inline-flex items-center gap-2 h-12 px-6 rounded-md bg-[#0A0A14] text-[#F5F1EA] text-sm hover:bg-black transition-colors">
+              <Link to="/login" data-testid="hero-cta" className="inline-flex items-center gap-2 h-12 px-6 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white text-sm hover:opacity-90 transition-colors">
                 Testar 30 dias grátis <ArrowRight className="h-4 w-4" />
               </Link>
-              <a href="#comparativo" className="inline-flex items-center gap-2 h-12 px-6 rounded-md border border-black/15 bg-white/40 hover:bg-white text-sm">
+              <a href="#comparativo" className="inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/15 bg-[#121214]/[0.02] hover:bg-[#121214] text-sm">
                 Ver comparativo
               </a>
-              <div className="flex items-center gap-2 text-xs text-black/50 ml-2">
+              <div className="flex items-center gap-2 text-xs text-zinc-500 ml-2">
                 <ShieldCheck className="h-3.5 w-3.5" /> Free vitalício · sem cartão
               </div>
             </motion.div>
@@ -164,36 +164,36 @@ export default function Apresentacao() {
             className="lg:col-span-5 relative h-[420px]"
           >
             {/* Grain background */}
-            <div className="absolute inset-0 rounded-2xl bg-[#0A0A14] overflow-hidden">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] overflow-hidden">
               <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(#F5F1EA 1px, transparent 1px)", backgroundSize: "5px 5px" }} />
               {/* Copiloto card */}
               <motion.div
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-                className="absolute top-6 left-6 w-64 rounded-lg bg-white shadow-xl border border-black/10 p-4"
+                className="absolute top-6 left-6 w-64 rounded-lg bg-[#121214] shadow-xl border border-white/10 p-4"
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Bot className="h-3.5 w-3.5" />
-                  <div className="text-[10px] uppercase tracking-widest text-black/50">Copiloto Prisma</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">Copiloto Prisma</div>
                 </div>
                 <div className="text-sm">"Gere uma proposta para a Padaria Bella."</div>
-                <div className="mt-3 h-1 bg-black/5 rounded overflow-hidden">
-                  <motion.div animate={{ width: ["10%", "85%"] }} transition={{ duration: 3, repeat: Infinity }} className="h-full bg-[#0A0A14]" />
+                <div className="mt-3 h-1 bg-[#121214]/5 rounded overflow-hidden">
+                  <motion.div animate={{ width: ["10%", "85%"] }} transition={{ duration: 3, repeat: Infinity }} className="h-full bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6]" />
                 </div>
               </motion.div>
               {/* OS card */}
               <motion.div
                 animate={{ y: [0, 10, 0] }}
                 transition={{ duration: 7, repeat: Infinity, ease: "easeInOut", delay: 1 }}
-                className="absolute bottom-8 right-6 w-72 rounded-lg bg-white shadow-xl border border-black/10 p-4"
+                className="absolute bottom-8 right-6 w-72 rounded-lg bg-[#121214] shadow-xl border border-white/10 p-4"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="text-[10px] uppercase tracking-widest text-black/50">OS · aprovada</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">OS · aprovada</div>
                   <div className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700">Assinada</div>
                 </div>
                 <div className="font-display text-base">Website Bella</div>
                 <div className="mt-3 flex items-center justify-between">
-                  <div className="text-xs text-black/50">Padaria Bella</div>
+                  <div className="text-xs text-zinc-500">Padaria Bella</div>
                   <div className="font-mono text-sm">R$ 4.500,00</div>
                 </div>
                 <button className="mt-3 w-full h-8 rounded-md bg-emerald-600 text-white text-xs flex items-center justify-center gap-1.5">
@@ -201,10 +201,10 @@ export default function Apresentacao() {
                 </button>
               </motion.div>
               {/* Small floating badges */}
-              <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 5, repeat: Infinity, delay: 0.5 }} className="absolute top-40 right-10 h-10 w-10 rounded-full bg-[#F5F1EA] shadow-lg flex items-center justify-center">
+              <motion.div animate={{ y: [0, -6, 0] }} transition={{ duration: 5, repeat: Infinity, delay: 0.5 }} className="absolute top-40 right-10 h-10 w-10 rounded-full bg-[#08090A] shadow-lg flex items-center justify-center">
                 <MessageCircle className="h-4 w-4" />
               </motion.div>
-              <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 1.2 }} className="absolute bottom-40 left-16 h-10 w-10 rounded-full bg-[#F5F1EA] shadow-lg flex items-center justify-center">
+              <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 4, repeat: Infinity, delay: 1.2 }} className="absolute bottom-40 left-16 h-10 w-10 rounded-full bg-[#08090A] shadow-lg flex items-center justify-center">
                 <Zap className="h-4 w-4" />
               </motion.div>
             </div>
@@ -213,8 +213,8 @@ export default function Apresentacao() {
       </Section>
 
       {/* Marquee of pain points */}
-      <div className="border-y border-black/10 bg-white/40 py-4 overflow-hidden print:hidden">
-        <div className="flex gap-16 animate-marquee whitespace-nowrap text-sm text-black/60">
+      <div className="border-y border-white/10 bg-[#121214]/[0.02] py-4 overflow-hidden print:hidden">
+        <div className="flex gap-16 animate-marquee whitespace-nowrap text-sm text-zinc-400">
           {["Planilha para tudo", "5 apps abertos ao mesmo tempo", "Cobrança esquecida", "Proposta em Word", "WhatsApp misturado com pessoal", "Sem histórico do cliente"].concat(["Planilha para tudo","5 apps abertos ao mesmo tempo","Cobrança esquecida","Proposta em Word","WhatsApp misturado com pessoal","Sem histórico do cliente"]).map((t, i) => (
             <span key={i} className="flex items-center gap-2"><X className="h-3.5 w-3.5 text-red-500" /> {t}</span>
           ))}
@@ -225,17 +225,17 @@ export default function Apresentacao() {
       <Section className="py-20 md:py-28">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
           <div>
-            <div className="overline text-black/50 mb-4">O problema</div>
+            <div className="overline text-zinc-500 mb-4">O problema</div>
             <h2 className="font-display font-light text-3xl md:text-4xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
               PMEs perdem <span className="italic">horas por dia</span> pulando entre planilhas, WhatsApp e cobranças manuais.
             </h2>
-            <ul className="mt-6 space-y-3 text-black/70">
+            <ul className="mt-6 space-y-3 text-zinc-300">
               {["Lead veio pelo WhatsApp, mas o CRM não sabe.", "Proposta foi por e-mail. Cobrança, esquecida.", "Cronograma no Trello, financeiro no Excel, docs no Drive.", "Ninguém sabe quanto tempo foi gasto em qual cliente."].map((t) => (
                 <li key={t} className="flex items-start gap-2"><X className="h-4 w-4 text-red-500 mt-0.5 shrink-0" /><span>{t}</span></li>
               ))}
             </ul>
           </div>
-          <div className="rounded-2xl bg-[#0A0A14] text-[#F5F1EA] p-8 md:p-10">
+          <div className="rounded-2xl bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white p-8 md:p-10">
             <div className="overline text-white/50 mb-4">A solução</div>
             <h3 className="font-display font-light text-3xl md:text-4xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
               Um só painel. IA nativa. PIX embutido.
@@ -252,7 +252,7 @@ export default function Apresentacao() {
       {/* ============== MÓDULOS ============== */}
       <Section id="modulos" className="py-20 md:py-28">
         <div className="max-w-3xl">
-          <div className="overline text-black/50 mb-3">8 módulos, 1 login</div>
+          <div className="overline text-zinc-500 mb-3">8 módulos, 1 login</div>
           <h2 className="font-display font-light text-3xl md:text-5xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
             Tudo que sua PME precisa, <span className="italic">no mesmo painel</span>.
           </h2>
@@ -265,13 +265,13 @@ export default function Apresentacao() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.05, duration: 0.5 }}
-              className="rounded-xl border border-black/10 bg-white p-5 hover:border-black/30 transition-colors"
+              className="rounded-xl border border-white/10 bg-[#121214] p-5 hover:border-white/20 transition-colors"
             >
-              <div className="h-10 w-10 rounded-md bg-[#F5F1EA] flex items-center justify-center mb-4">
+              <div className="h-10 w-10 rounded-md bg-[#08090A] flex items-center justify-center mb-4">
                 <Icon className="h-4 w-4" />
               </div>
               <div className="font-display text-lg">{name}</div>
-              <div className="mt-1 text-xs text-black/60 leading-relaxed">{desc}</div>
+              <div className="mt-1 text-xs text-zinc-400 leading-relaxed">{desc}</div>
             </motion.div>
           ))}
         </div>
@@ -280,13 +280,13 @@ export default function Apresentacao() {
       {/* ============== FLUXO NARRATIVO ============== */}
       <Section id="fluxo" className="py-20 md:py-28">
         <div className="max-w-3xl">
-          <div className="overline text-black/50 mb-3">Do primeiro "olá" ao PIX cair</div>
+          <div className="overline text-zinc-500 mb-3">Do primeiro "olá" ao PIX cair</div>
           <h2 className="font-display font-light text-3xl md:text-5xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
             <span className="italic">7 minutos</span> do lead ao pagamento.
           </h2>
         </div>
         <div className="mt-14 relative">
-          <div className="hidden md:block absolute left-8 top-0 bottom-0 w-px bg-black/10" />
+          <div className="hidden md:block absolute left-8 top-0 bottom-0 w-px bg-[#121214]/10" />
           <div className="space-y-10 md:space-y-14">
             {[
               { icon: PhoneCall, t: "0:00 · Lead chega no WhatsApp", d: "Cliente manda mensagem. Aparece no inbox e vira card no CRM automaticamente.", tag: "CRM + WhatsApp" },
@@ -305,14 +305,14 @@ export default function Apresentacao() {
                 className="flex gap-6 items-start"
               >
                 <div className="relative">
-                  <div className="h-16 w-16 rounded-xl bg-[#0A0A14] text-[#F5F1EA] flex items-center justify-center shrink-0">
+                  <div className="h-16 w-16 rounded-xl bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white flex items-center justify-center shrink-0">
                     <step.icon className="h-5 w-5" />
                   </div>
                 </div>
                 <div className="flex-1 pt-1">
-                  <div className="text-[10px] uppercase tracking-widest text-black/40">{step.tag}</div>
+                  <div className="text-[10px] uppercase tracking-widest text-zinc-500">{step.tag}</div>
                   <div className="font-display text-xl md:text-2xl mt-1">{step.t}</div>
-                  <div className="mt-2 text-black/60 max-w-xl">{step.d}</div>
+                  <div className="mt-2 text-zinc-400 max-w-xl">{step.d}</div>
                 </div>
               </motion.div>
             ))}
@@ -322,7 +322,7 @@ export default function Apresentacao() {
 
       {/* ============== STATS ============== */}
       <Section className="py-20 md:py-28">
-        <div className="rounded-2xl bg-[#0A0A14] text-[#F5F1EA] p-8 md:p-14">
+        <div className="rounded-2xl bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white p-8 md:p-14">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {STATS.map((s, i) => (
               <motion.div
@@ -344,31 +344,31 @@ export default function Apresentacao() {
       {/* ============== COMPARATIVO ============== */}
       <Section id="comparativo" className="py-20 md:py-28">
         <div className="max-w-3xl">
-          <div className="overline text-black/50 mb-3">Comparativo honesto</div>
+          <div className="overline text-zinc-500 mb-3">Comparativo honesto</div>
           <h2 className="font-display font-light text-3xl md:text-5xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
             Feito para PMEs <span className="italic">brasileiras</span>.
           </h2>
-          <p className="mt-3 text-black/60">Monday e ClickUp são ótimos para times grandes gringos. Pipedrive é um bom CRM. Prisma é o único que roda o negócio inteiro em português, com PIX e WhatsApp de verdade.</p>
+          <p className="mt-3 text-zinc-400">Monday e ClickUp são ótimos para times grandes gringos. Pipedrive é um bom CRM. Prisma é o único que roda o negócio inteiro em português, com PIX e WhatsApp de verdade.</p>
         </div>
-        <div className="mt-10 rounded-xl border border-black/10 overflow-hidden bg-white">
+        <div className="mt-10 rounded-xl border border-white/10 overflow-hidden bg-[#121214]">
           <table className="w-full text-sm">
-            <thead className="bg-[#F5F1EA]">
+            <thead className="bg-[#08090A]">
               <tr className="text-left">
-                <th className="p-4 font-medium text-[11px] uppercase tracking-widest text-black/50">Recurso</th>
+                <th className="p-4 font-medium text-[11px] uppercase tracking-widest text-zinc-500">Recurso</th>
                 <th className="p-4 text-center font-medium">Prisma</th>
-                <th className="p-4 text-center font-medium text-black/60">Monday</th>
-                <th className="p-4 text-center font-medium text-black/60">ClickUp</th>
-                <th className="p-4 text-center font-medium text-black/60">Pipedrive</th>
+                <th className="p-4 text-center font-medium text-zinc-400">Monday</th>
+                <th className="p-4 text-center font-medium text-zinc-400">ClickUp</th>
+                <th className="p-4 text-center font-medium text-zinc-400">Pipedrive</th>
               </tr>
             </thead>
             <tbody>
               {COMP_ROWS.map((r, i) => (
-                <tr key={i} className="border-t border-black/5">
-                  <td className="p-4 text-black/80">{r.f}</td>
+                <tr key={i} className="border-t border-white/5">
+                  <td className="p-4 text-zinc-200">{r.f}</td>
                   {[r.p, r.m, r.c, r.o].map((v, j) => (
                     <td key={j} className="p-4 text-center">
                       {v === true && <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-emerald-100 text-emerald-700"><Check className="h-3.5 w-3.5" /></span>}
-                      {v === false && <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-black/5 text-black/30"><X className="h-3.5 w-3.5" /></span>}
+                      {v === false && <span className="inline-flex items-center justify-center h-6 w-6 rounded-full bg-[#121214]/5 text-zinc-600"><X className="h-3.5 w-3.5" /></span>}
                       {typeof v === "string" && <span className="text-[11px] px-2 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700">{v}</span>}
                     </td>
                   ))}
@@ -382,7 +382,7 @@ export default function Apresentacao() {
       {/* ============== DEPOIMENTOS ============== */}
       <Section id="clientes" className="py-20 md:py-28">
         <div className="max-w-3xl">
-          <div className="overline text-black/50 mb-3">Quem já usa</div>
+          <div className="overline text-zinc-500 mb-3">Quem já usa</div>
           <h2 className="font-display font-light text-3xl md:text-5xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
             PMEs reais. Resultados <span className="italic">reais</span>.
           </h2>
@@ -395,13 +395,13 @@ export default function Apresentacao() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: i * 0.1, duration: 0.6 }}
-              className="rounded-xl border border-black/10 bg-white p-6 flex flex-col"
+              className="rounded-xl border border-white/10 bg-[#121214] p-6 flex flex-col"
             >
-              <div className="text-3xl leading-none text-black/20" style={{ fontFamily: "'Fraunces', serif" }}>&ldquo;</div>
-              <p className="mt-2 text-sm text-black/80 leading-relaxed flex-1">{t.quote}</p>
-              <footer className="mt-6 pt-4 border-t border-black/5">
+              <div className="text-3xl leading-none text-white/20" style={{ fontFamily: "'Fraunces', serif" }}>&ldquo;</div>
+              <p className="mt-2 text-sm text-zinc-200 leading-relaxed flex-1">{t.quote}</p>
+              <footer className="mt-6 pt-4 border-t border-white/5">
                 <div className="font-medium text-sm">{t.author}</div>
-                <div className="text-xs text-black/50">{t.role}</div>
+                <div className="text-xs text-zinc-500">{t.role}</div>
               </footer>
             </motion.blockquote>
           ))}
@@ -411,7 +411,7 @@ export default function Apresentacao() {
       {/* ============== PRICING ============== */}
       <Section id="planos" className="py-20 md:py-28">
         <div className="max-w-3xl">
-          <div className="overline text-black/50 mb-3">Planos simples · em Reais</div>
+          <div className="overline text-zinc-500 mb-3">Planos simples · em Reais</div>
           <h2 className="font-display font-light text-3xl md:text-5xl tracking-tight leading-tight" style={{ fontFamily: "'Fraunces', serif" }}>
             Comece grátis. Cresça <span className="italic">quando fizer sentido</span>.
           </h2>
@@ -420,34 +420,34 @@ export default function Apresentacao() {
           {PLANS.map((p, i) => (
             <div
               key={p.name}
-              className={`rounded-xl p-6 border relative ${p.highlight ? "bg-[#0A0A14] text-[#F5F1EA] border-transparent" : "bg-white border-black/10"}`}
+              className={`rounded-xl p-6 border relative ${p.highlight ? "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white border-transparent" : "bg-[#121214] border-white/10"}`}
             >
               {p.highlight && (
-                <div className="absolute -top-3 left-6 text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#F5F1EA] text-[#0A0A14]">Recomendado</div>
+                <div className="absolute -top-3 left-6 text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#08090A] text-white">Recomendado</div>
               )}
               <div className="font-display text-xl">{p.name}</div>
               <div className="mt-3 flex items-baseline gap-1">
                 <div className="font-display text-4xl" style={{ fontFamily: "'Fraunces', serif" }}>{p.price}</div>
-                <div className={`text-xs ${p.highlight ? "text-white/60" : "text-black/50"}`}>{p.period}</div>
+                <div className={`text-xs ${p.highlight ? "text-white/60" : "text-zinc-500"}`}>{p.period}</div>
               </div>
               <ul className="mt-5 space-y-2 text-sm">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2 items-start">
                     <Check className={`h-4 w-4 mt-0.5 shrink-0 ${p.highlight ? "text-emerald-400" : "text-emerald-600"}`} />
-                    <span className={p.highlight ? "text-white/85" : "text-black/70"}>{f}</span>
+                    <span className={p.highlight ? "text-white/85" : "text-zinc-300"}>{f}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-        <div className="mt-6 rounded-xl border-2 border-dashed border-[#0A0A14] bg-white p-6 flex items-center gap-4 flex-wrap justify-between">
+        <div className="mt-6 rounded-xl border-2 border-dashed border-[#0A0A14] bg-[#121214] p-6 flex items-center gap-4 flex-wrap justify-between">
           <div>
-            <div className="overline text-black/50 mb-1">Founder Deal · vagas limitadas</div>
-            <div className="font-display text-2xl">R$ 4.997 <span className="text-sm text-black/50">à vista · 3 anos de Growth</span></div>
-            <div className="text-xs text-black/60 mt-1">Trave o preço agora. Depois vira Growth normal após 36 meses.</div>
+            <div className="overline text-zinc-500 mb-1">Founder Deal · vagas limitadas</div>
+            <div className="font-display text-2xl">R$ 4.997 <span className="text-sm text-zinc-500">à vista · 3 anos de Growth</span></div>
+            <div className="text-xs text-zinc-400 mt-1">Trave o preço agora. Depois vira Growth normal após 36 meses.</div>
           </div>
-          <Link to="/#precos" className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-[#0A0A14] text-[#F5F1EA] text-sm hover:bg-black">
+          <Link to="/#precos" className="inline-flex items-center gap-2 h-11 px-5 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white text-sm hover:opacity-90">
             Reservar minha vaga <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
@@ -455,7 +455,7 @@ export default function Apresentacao() {
 
       {/* ============== CTA FINAL ============== */}
       <Section className="pb-24">
-        <div className="rounded-2xl bg-[#0A0A14] text-[#F5F1EA] p-10 md:p-16 relative overflow-hidden">
+        <div className="rounded-2xl bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white p-10 md:p-16 relative overflow-hidden">
           <div className="absolute inset-0 opacity-[0.06]" style={{ backgroundImage: "radial-gradient(#F5F1EA 1px, transparent 1px)", backgroundSize: "6px 6px" }} />
           <div className="relative">
             <div className="max-w-2xl">
@@ -465,17 +465,17 @@ export default function Apresentacao() {
               <p className="mt-4 text-white/70 md:text-lg">Teste 30 dias grátis. Se não gostar, é só sair. Se gostar, você não larga mais.</p>
             </div>
             <div className="mt-10 flex items-center gap-3 flex-wrap">
-              <Link to="/login" data-testid="cta-final-btn" className="inline-flex items-center gap-2 h-12 px-6 rounded-md bg-[#F5F1EA] text-[#0A0A14] text-sm hover:bg-white transition-colors">
+              <Link to="/login" data-testid="cta-final-btn" className="inline-flex items-center gap-2 h-12 px-6 rounded-md bg-[#08090A] text-white text-sm hover:bg-[#121214] transition-colors">
                 Começar agora <ArrowRight className="h-4 w-4" />
               </Link>
-              <a href="mailto:vendas@prisma.com.br" className="inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-white/10">
+              <a href="mailto:vendas@prisma.com.br" className="inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-[#121214]/10">
                 Falar com o fundador
               </a>
               <a
                 href={`${process.env.REACT_APP_BACKEND_URL}/api/public/apresentacao.pdf`}
                 target="_blank" rel="noopener"
                 data-testid="cta-pdf-btn"
-                className="hidden sm:inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-white/10"
+                className="hidden sm:inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-[#121214]/10"
               >
                 <Download className="h-4 w-4" /> Baixar PDF one-page
               </a>
@@ -485,11 +485,11 @@ export default function Apresentacao() {
       </Section>
 
       {/* Footer */}
-      <footer className="border-t border-black/10 py-10 text-center text-xs text-black/40">
+      <footer className="border-t border-white/10 py-10 text-center text-xs text-zinc-500">
         <div className="max-w-6xl mx-auto px-6 md:px-10 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Logo className="h-6 w-6" />
-            <span className="italic text-sm text-black/60" style={{ fontFamily: "'Fraunces', serif" }}>Prisma</span>
+            <span className="italic text-sm text-zinc-400" style={{ fontFamily: "'Fraunces', serif" }}>Prisma</span>
             <span>· painel de controle da PME</span>
           </div>
           <div>Feito no Brasil · pt-BR · {new Date().getFullYear()}</div>

@@ -87,42 +87,42 @@ export default function OSPublica() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F5F1EA] flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-black/50" />
+      <div className="min-h-screen bg-[#08090A] flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     );
   }
   if (error || !os) {
     return (
-      <div className="min-h-screen bg-[#F5F1EA] flex items-center justify-center p-6" data-testid="os-publica-error">
-        <div className="max-w-md text-center bg-white rounded-lg border border-black/10 p-10">
+      <div className="min-h-screen bg-[#08090A] flex items-center justify-center p-6" data-testid="os-publica-error">
+        <div className="max-w-md text-center bg-[#121214] rounded-lg border border-white/10 p-10">
           <div className="font-display text-2xl">Ops!</div>
-          <p className="text-sm text-black/60 mt-2">{error || "Proposta não encontrada."}</p>
+          <p className="text-sm text-zinc-400 mt-2">{error || "Proposta não encontrada."}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F1EA]" data-testid="os-publica-page">
+    <div className="min-h-screen bg-[#08090A]" data-testid="os-publica-page">
       <Toaster position="bottom-right" richColors />
       {/* Header */}
-      <div className="border-b border-black/10 bg-white/60 backdrop-blur">
+      <div className="border-b border-white/10 bg-[#121214]/[0.02] backdrop-blur">
         <div className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-8 w-8 rounded-md bg-[#0A0A14] flex items-center justify-center">
+            <div className="h-8 w-8 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] flex items-center justify-center">
               <svg width="14" height="14" viewBox="0 0 44 44" fill="none"><path d="M22 4 L40 34 L4 34 Z" fill="#F5F1EA" strokeLinejoin="round" /></svg>
             </div>
             <div className="italic text-lg" style={{ fontFamily: "'Fraunces', serif" }}>{brand.name || "Prisma"}</div>
           </div>
-          <div className="text-xs text-black/50 font-mono">Proposta #{os.os_id?.slice(-6)}</div>
+          <div className="text-xs text-zinc-500 font-mono">Proposta #{os.os_id?.slice(-6)}</div>
         </div>
       </div>
 
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <div className="text-xs uppercase tracking-widest text-black/50">Ordem de serviço</div>
+        <div className="text-xs uppercase tracking-widest text-zinc-500">Ordem de serviço</div>
         <h1 className="font-display text-4xl md:text-5xl font-light tracking-tight mt-3">{os.title}</h1>
-        <div className="mt-3 text-sm text-black/60">Para: <b className="text-black/80">{os.client_name}</b> · {os.client_email || "—"}</div>
+        <div className="mt-3 text-sm text-zinc-400">Para: <b className="text-zinc-200">{os.client_name}</b> · {os.client_email || "—"}</div>
 
         {/* Status badges */}
         <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
@@ -132,11 +132,11 @@ export default function OSPublica() {
         </div>
 
         {/* Itens */}
-        <section className="mt-10 rounded-lg border border-black/10 bg-white p-6">
-          <div className="overline text-black/50 mb-4">Itens</div>
+        <section className="mt-10 rounded-lg border border-white/10 bg-[#121214] p-6">
+          <div className="overline text-zinc-500 mb-4">Itens</div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[10px] uppercase tracking-widest text-black/40">
+              <tr className="text-left text-[10px] uppercase tracking-widest text-zinc-500">
                 <th className="pb-3 font-medium">Descrição</th>
                 <th className="pb-3 font-medium text-right">Qtd</th>
                 <th className="pb-3 font-medium text-right">Valor unit.</th>
@@ -145,7 +145,7 @@ export default function OSPublica() {
             </thead>
             <tbody>
               {(os.items || []).map((it, i) => (
-                <tr key={i} className="border-t border-black/5">
+                <tr key={i} className="border-t border-white/5">
                   <td className="py-3 pr-3">{it.description}</td>
                   <td className="py-3 pr-3 text-right font-mono text-xs">{Number(it.quantity) || 1}</td>
                   <td className="py-3 pr-3 text-right font-mono text-xs">{brl(it.unit_price)}</td>
@@ -154,23 +154,23 @@ export default function OSPublica() {
               ))}
             </tbody>
             <tfoot>
-              <tr className="border-t-2 border-black/10">
+              <tr className="border-t-2 border-white/10">
                 <td colSpan={3} className="pt-4 text-right text-sm">Total</td>
                 <td className="pt-4 text-right font-display text-2xl">{brl(total)}</td>
               </tr>
             </tfoot>
           </table>
-          {os.notes && <p className="mt-4 text-xs text-black/50 border-t border-black/5 pt-4 whitespace-pre-wrap">{os.notes}</p>}
+          {os.notes && <p className="mt-4 text-xs text-zinc-500 border-t border-white/5 pt-4 whitespace-pre-wrap">{os.notes}</p>}
         </section>
 
         {/* Custom fields */}
         {(os.custom_fields || []).length > 0 && (
-          <section className="mt-6 rounded-lg border border-black/10 bg-white p-6">
-            <div className="overline text-black/50 mb-3">Detalhes adicionais</div>
+          <section className="mt-6 rounded-lg border border-white/10 bg-[#121214] p-6">
+            <div className="overline text-zinc-500 mb-3">Detalhes adicionais</div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {(os.custom_fields || []).map((cf, i) => (
                 <div key={i} className="flex items-baseline gap-2">
-                  <div className="text-xs text-black/50 min-w-[110px]">{cf.name}</div>
+                  <div className="text-xs text-zinc-500 min-w-[110px]">{cf.name}</div>
                   <div className="text-sm">{cf.type === "money" ? brl(cf.value) : String(cf.value ?? "—")}</div>
                 </div>
               ))}
@@ -179,14 +179,14 @@ export default function OSPublica() {
         )}
 
         {/* CTAs */}
-        <section className="mt-8 rounded-lg border border-black/10 bg-white p-6">
+        <section className="mt-8 rounded-lg border border-white/10 bg-[#121214] p-6">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
             <div>
               <div className="font-display text-xl">Pronto para aprovar?</div>
-              <div className="text-sm text-black/60 mt-1">Aceite a proposta com um clique e pague depois via PIX.</div>
+              <div className="text-sm text-zinc-400 mt-1">Aceite a proposta com um clique e pague depois via PIX.</div>
             </div>
             <div className="flex gap-2 flex-wrap">
-              {!signed && <Button data-testid="sign-btn" onClick={() => setSignOpen(true)} className="bg-[#0A0A14] hover:bg-black text-[#F5F1EA] h-11 px-5">
+              {!signed && <Button data-testid="sign-btn" onClick={() => setSignOpen(true)} className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white h-11 px-5">
                 <FileSignature className="h-4 w-4 mr-2" /> Aceitar e assinar
               </Button>}
               {signed && (
@@ -202,7 +202,7 @@ export default function OSPublica() {
             </div>
           </div>
           {signed && (
-            <div className="mt-4 text-xs text-black/50 border-t border-black/5 pt-3">
+            <div className="mt-4 text-xs text-zinc-500 border-t border-white/5 pt-3">
               Assinada por <b>{os.signed_by}</b> em {dt(os.signed_at)} · assinatura eletrônica válida (MP 2.200-2 / Lei 14.063/2020).
             </div>
           )}
@@ -212,17 +212,17 @@ export default function OSPublica() {
         {related.length > 0 && (
           <section className="mt-10">
             <button onClick={() => setShowRelated((v) => !v)} className="w-full text-left flex items-center gap-2 mb-3 group" data-testid="toggle-related">
-              <div className="overline text-black/50 group-hover:text-black">Outras propostas suas ({related.length})</div>
-              <ChevronDown className={`h-3 w-3 text-black/40 transition-transform ${showRelated ? "rotate-180" : ""}`} />
+              <div className="overline text-zinc-500 group-hover:text-white">Outras propostas suas ({related.length})</div>
+              <ChevronDown className={`h-3 w-3 text-zinc-500 transition-transform ${showRelated ? "rotate-180" : ""}`} />
             </button>
             {showRelated && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3" data-testid="related-list">
                 {related.map((r) => (
-                  <div key={r.os_id} className="rounded-md border border-black/10 bg-white p-4">
-                    <div className="text-xs text-black/50">{dt(r.created_at)}</div>
+                  <div key={r.os_id} className="rounded-md border border-white/10 bg-[#121214] p-4">
+                    <div className="text-xs text-zinc-500">{dt(r.created_at)}</div>
                     <div className="font-display text-base mt-1">{r.title}</div>
                     <div className="flex items-center justify-between mt-2">
-                      <div className="text-[10px] uppercase tracking-widest text-black/40">{r.status}</div>
+                      <div className="text-[10px] uppercase tracking-widest text-zinc-500">{r.status}</div>
                       <div className="font-mono text-sm">{brl(r.total)}</div>
                     </div>
                   </div>
@@ -232,7 +232,7 @@ export default function OSPublica() {
           </section>
         )}
 
-        <div className="mt-16 text-center text-xs text-black/40">
+        <div className="mt-16 text-center text-xs text-zinc-500">
           Enviado por <span className="italic" style={{ fontFamily: "'Fraunces', serif" }}>{brand.name}</span> · pagamento processado por Stripe · PIX + cartão
         </div>
       </div>
@@ -247,12 +247,12 @@ export default function OSPublica() {
           <form onSubmit={sign} className="space-y-4 pt-2">
             <div><Label>Nome completo</Label><Input required data-testid="sign-name" value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
             <div><Label>E-mail</Label><Input type="email" data-testid="sign-email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-            <label className="flex items-start gap-2 text-xs text-black/60">
+            <label className="flex items-start gap-2 text-xs text-zinc-400">
               <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} data-testid="sign-accept" className="mt-0.5" />
               <span>Li e aceito os termos desta proposta comercial de <b>{brl(total)}</b>. Autorizo a coleta do meu IP e data/hora para fins de comprovação.</span>
             </label>
             <DialogFooter>
-              <Button type="submit" data-testid="sign-submit" disabled={signing || !accept} className="bg-[#0A0A14] hover:bg-black text-[#F5F1EA]">
+              <Button type="submit" data-testid="sign-submit" disabled={signing || !accept} className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white">
                 {signing ? <Loader2 className="h-4 w-4 animate-spin" /> : "Confirmar assinatura"}
               </Button>
             </DialogFooter>

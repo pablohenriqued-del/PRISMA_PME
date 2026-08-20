@@ -1,182 +1,161 @@
 {
-  "project_context": {
-    "name": "SaaS PME AI-Native Platform",
-    "target_audience": "Brazilian SMEs (PMEs)",
-    "description": "Extremely modern, visually striking, modular SaaS platform with native AI (Copilot), WhatsApp integration, CRM, Projects, Finances, Documents, Automations, and Dashboards.",
-    "language": "Português (Brasil)",
-    "vibe": "Premium, minimal-chrome, action-oriented, cutting-edge but accessible.",
-    "design_archetype": "Swiss & High-Contrast mixed with Organic & Earthy elements to balance tech with human approachability."
-  },
-  "theme": {
-    "mode": "Light mode primary, with high-contrast dark mode support.",
-    "philosophy": "Intentional incompleteness—raw, schematic, brutally clear interfaces prioritizing legibility over decoration. No generic Vercel/Stripe looks.",
-    "surface_strategy": "Minimal-chrome layout. Reduce decorative UI, keep borders thin, use quiet colors, let typography and generous spacing carry the structure. Cardless or 1px subtle borders (max 8px radius)."
-  },
-  "colors": {
-    "background": {
-      "light": "#FAFAFA",
-      "dark": "#09090B",
-      "surface_light": "#FFFFFF",
-      "surface_dark": "#18181B"
-    },
-    "primary": {
-      "description": "Elegant Noir (Use black/dark slate for primary actions for a premium feel)",
-      "value": "#0F172A"
-    },
-    "accents": {
-      "ai_copilot": "#4338CA",
-      "finance_success": "#059669",
-      "warning": "#D97706",
-      "destructive": "#DC2626"
-    },
-    "borders": {
-      "light": "#E5E7EB",
-      "dark": "#27272A"
-    },
-    "rules": [
-      "FORBIDDEN_COLOR for AI page: #7351B7",
-      "FORBIDDEN_COLOR for dashboards: teal green or teal blue (#1B93A4)",
-      "Never use pure #000000 or #808080. Tint greys slightly.",
-      "No full-screen gradients. Texture > gloss.",
-      "CRITICAL: Do NOT use pure transparent backgrounds in headers, overlays, or dropdowns. Always use solid or glassmorphism (e.g., bg-white/80 backdrop-blur-xl)."
-    ]
-  },
-  "typography": {
-    "rules": [
-      "BANNED HEADINGS: Inter, Roboto, Open Sans, Lato, Space Grotesk.",
-      "Use tight letter spacing (tracking-tight) for headings.",
-      "Do not exceed text-6xl for the largest headings.",
-      "Overlines/Labels must be uppercase, tiny, wide spacing (tracking-[0.2em])."
-    ],
-    "pairing": {
-      "headings": {
-        "family": "Outfit or Cabinet Grotesk",
-        "weights": ["300 (Light)", "500 (Medium)", "700 (Bold)"],
-        "classes": "font-sans tracking-tight text-slate-900 dark:text-white"
-      },
-      "body": {
-        "family": "Manrope or Plus Jakarta Sans",
-        "weights": ["400 (Regular)", "500 (Medium)"],
-        "classes": "font-sans leading-relaxed text-slate-600 dark:text-slate-300"
-      }
-    }
-  },
-  "layouts": {
-    "general": [
-      "Left sidebar for main navigation (collapsible).",
-      "Top strip for Command Palette, Profile, and quick actions.",
-      "Main canvas for modular, widget-based grids.",
-      "Generous spacing: Use p-6, p-8, p-12 for breathing room. Internal padding in bordered containers is MANDATORY to prevent text collision."
-    ],
-    "dashboard_grid": {
-      "type": "High Density Grid (Bento style)",
-      "classes": "grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6",
-      "rules": "Every pixel utilized. Use h-full on children. Overcome equal-square boredom by mixing spans (col-span-2, row-span-2)."
-    },
-    "alignment": [
-      "Center-align only for empty states or specific visual focus.",
-      "Left-align data, labels, inputs, and dense content.",
-      "Mobile-first responsive always."
-    ]
-  },
-  "module_specific_guidelines": {
-    "ai_copilot": "Floating side-panel or slide-over with glassmorphism (backdrop-blur-2xl bg-white/70 border-l border-white/40). Subtle gradient beam border. Chat interface with clear distinction between AI and User messages.",
-    "crm": "Kanban board layout. Horizontal scrolling container with columns (Leads, Negociação, Ganho). Use subtle dragging animations.",
-    "whatsapp": "Two-pane inbox layout (F-pattern scan). Left narrow list of chats, right wide canvas for messaging. Minimal chrome.",
-    "projetos": "Dense but restrained task list or boards. Use diverse avatars for members.",
-    "financeiro": "North-star-first layout. Large primary metric (Receita/Fluxo de Caixa) top-left, secondary stats across top. Detailed tables below.",
-    "documentos": "Grid of cards with stylized file icons. Use progressive disclosure for metadata (hover to reveal actions).",
-    "automacoes": "Visual, node-like aesthetic. Use connecting lines or clear step-by-step vertical timelines.",
-    "dashboards": "Modular widget grid. Clean charts (Recharts or Shadcn Charts) with no grid-line clutter. Use tooltips for deep data."
-  },
-  "motion_and_interactions": {
-    "rules": [
-      "DO NOT use 'transition: all'. Explicitly state transition properties (e.g., transition-colors, transition-transform).",
-      "Hover states for all interactive elements (lift -translate-y-1 or color shift).",
-      "Use sonner for toast notifications (bottom-right or top-center)."
-    ],
-    "libraries": ["framer-motion", "sonner"]
-  },
-  "component_usage_rules": {
-    "shadcn": [
-      "Use Shadcn UI for logic (Select, Dialog, Calendar, Form, Tabs), but heavily strip the default Vercel look.",
-      "Override default heights if they clip content (e.g., TabsList h-auto).",
-      "Dropdowns/Selects MUST have solid/blur backgrounds, NEVER transparent."
-    ],
-    "forms": "Never use native input/select. Use Shadcn components.",
-    "buttons": "Modern, crisp edges (rounded-md) or pill-shaped if fitting the archetype. Subtle shadow on hover."
-  },
-  "visual_enhancers": {
-    "glassmorphism": "Used for sticky headers and Copilot floating panel. Must have high blur (backdrop-blur-xl) and 1px inner stroke.",
-    "neumorphism": "Avoid default soft UI. If used, combine soft shadow with a sharp 1px border.",
-    "empty_states": "Empty-state-aware layout. Do not show blank screens. Use soft illustrations or dashed-border 'Add New' drop zones."
-  },
-  "accessibility": {
-    "contrast": "Minimum 4.5:1 for normal text, 3:1 for large text. ALWAYS explicitly set text color on hover.",
-    "testing": "CRITICAL: All interactive and key informational elements MUST include a `data-testid` attribute (e.g., data-testid='login-btn').",
-    "focus": "Focus states must have higher contrast than default (e.g., focus:ring-2 focus:ring-slate-900)."
-  },
-  "media_and_icons": {
-    "icons": "Use @phosphor-icons/react (Duotone or Regular weight) for a high-end SaaS look. Provide installation: yarn add @phosphor-icons/react",
-    "images": "Use realistic, diverse avatars for users/team. Abstract modern gradients for onboarding or empty states."
-  },
-  "image_urls": {
-    "avatars": [
-      {
-        "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d",
-        "description": "Professional avatar (Man)",
-        "category": "user_avatar_1"
-      },
-      {
-        "url": "https://images.unsplash.com/photo-1607746882042-944635dfe10e",
-        "description": "Professional avatar (Woman)",
-        "category": "user_avatar_2"
-      },
-      {
-        "url": "https://images.pexels.com/photos/5945343/pexels-photo-5945343.jpeg",
-        "description": "Diverse team",
-        "category": "team_avatar"
-      }
-    ],
-    "backgrounds": [
-      {
-        "url": "https://images.unsplash.com/photo-1614851099511-773084f6911d",
-        "description": "Purple and pink light abstract illustration",
-        "category": "onboarding_bg"
-      },
-      {
-        "url": "https://images.unsplash.com/photo-1557683316-973673baf926",
-        "description": "Light to dark blue modern gradient",
-        "category": "auth_bg"
-      }
-    ]
-  },
+  "project": "Prisma SaaS - Redesign Visual Completo",
+  "theme": "dark-first",
+  "language": "pt-BR",
   "instructions_to_main_agent": [
-    "Start by setting up the font families in tailwind.config.js and Google Fonts in index.html.",
-    "Implement the core layout: Left Sidebar + Top Navbar + Main Content Area + Floating AI Copilot.",
-    "Create the Multi-tenant Onboarding flow and Google Login placeholder UI.",
-    "Build each module (CRM, Finance, etc.) using Shadcn components customized with our specific minimalist, high-contrast aesthetic.",
-    "Ensure the Command Palette is globally accessible via shortcut (e.g., Ctrl+K).",
-    "Inject `data-testid` into EVERY button, form input, tab, and actionable item.",
-    "Add fluid transitions for hover states without using `transition: all`."
+    "LEIA ISTO PRIMEIRO: O idioma oficial do sistema e de todos os textos da interface DEVE ser o português do Brasil (pt-BR).",
+    "Siga o estilo 'Dark SaaS Moderno' (inspirado em Linear.app, Vercel, Cursor).",
+    "NÃO use fundos totalmente transparentes sobre imagens. Use sempre solid colors ou glassmorphism forte (backdrop-blur-xl + bg-opacity).",
+    "Para elementos interativos, adicione hover states claros (aumento de brilho, glow sutil ou translado).",
+    "Utilize 'data-testid' obrigatório em todos os botões, links, modais e formulários.",
+    "Componentes de formulário (inputs, selects, dialogs) DEVEM usar componentes Shadcn fortemente customizados.",
+    "Para a Landing Page, prefira usar HTML puro + Tailwind para seções assimétricas e bento grids, limitando Shadcn apenas para formulários ou botões complexos."
   ],
   "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
-    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
-    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients.",
-    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
-    "Create depth through layered design elements with z-index hierarchy.",
-    "Use glass-morphism effects with backdrop filters (12-24px blur).",
-    "You MUST NOT apply universal transition. Eg: transition: all. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms.",
-    "You MUST NOT center align the app container, ie do not add .App { text-align: center; } in the css file. This disrupts the human natural reading flow of text.",
-    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style.",
-    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯 etc for icons.",
-    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
-    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
-    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
-    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN.",
-    "Prioritize using pre-existing components from src/components/ui when applicable.",
-    "Create new components that match the style and conventions of existing components when needed.",
-    "Examine existing components to understand the project's component patterns before creating new ones.",
-    "Use sonner for toasts. Sonner component are located in /app/src/components/ui/sonner.tsx"
-  ]
+    "Não centralize o layout com text-align: center globalmente. Respeite o fluxo de leitura à esquerda.",
+    "Nunca utilize ícones em formato de emoji (ex: 🤖, 💡). Use bibliotecas como lucide-react ou phosphor-icons.",
+    "As fontes DEVEM ser Outfit (Headings) e Inter (Body). Nunca use Roboto ou Open Sans.",
+    "Evite bordas grossas; prefira borders de 1px com rgba(255, 255, 255, 0.08).",
+    "Animações: use transições específicas (ex: transition-colors duration-200), não use 'transition-all'."
+  ],
+  "typography": {
+    "fonts": {
+      "headings": "Outfit, sans-serif",
+      "body": "Inter, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-5xl sm:text-6xl tracking-tight leading-none font-semibold",
+      "h2": "text-4xl sm:text-5xl tracking-tight leading-tight font-medium",
+      "h3": "text-2xl sm:text-3xl tracking-tight leading-snug font-medium",
+      "h4": "text-xl font-medium tracking-tight",
+      "body_large": "text-lg leading-relaxed text-zinc-300",
+      "body_base": "text-base leading-relaxed text-zinc-400",
+      "body_small": "text-sm leading-normal text-zinc-500",
+      "overline": "text-xs font-mono uppercase tracking-[0.2em] text-zinc-500"
+    },
+    "rules": "Cabeçalhos nunca usam peso Black a menos que exigido, o tracking deve ser bem justo (tracking-tighter) para h1 e h2."
+  },
+  "colors": {
+    "backgrounds": {
+      "app": "#08090A",
+      "surface": "#121214",
+      "surface_hover": "#1C1C1F",
+      "glass": "rgba(8, 9, 10, 0.7)"
+    },
+    "accents": {
+      "primary": "#5E6AD2",
+      "primary_hover": "#6C7AF4",
+      "electric_blue": "#00E5FF",
+      "electric_purple": "#8B5CF6"
+    },
+    "text": {
+      "primary": "#EDEDED",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "borders": {
+      "subtle": "rgba(255, 255, 255, 0.08)",
+      "strong": "rgba(255, 255, 255, 0.15)",
+      "accent": "rgba(94, 106, 210, 0.5)"
+    },
+    "status": {
+      "success": "#10B981",
+      "warning": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "css_variables": {
+    "description": "Adicionar no globals.css dentro de @layer base",
+    "root": {
+      "--background": "225 11% 4%",
+      "--foreground": "0 0% 93%",
+      "--card": "240 5% 7%",
+      "--card-foreground": "0 0% 93%",
+      "--popover": "240 5% 7%",
+      "--popover-foreground": "0 0% 93%",
+      "--primary": "234 59% 60%",
+      "--primary-foreground": "0 0% 100%",
+      "--secondary": "240 6% 12%",
+      "--secondary-foreground": "0 0% 93%",
+      "--muted": "240 6% 12%",
+      "--muted-foreground": "240 5% 65%",
+      "--accent": "234 59% 60%",
+      "--accent-foreground": "0 0% 100%",
+      "--border": "240 6% 12%",
+      "--input": "240 6% 12%",
+      "--ring": "234 59% 60%",
+      "--radius": "0.5rem"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "glow_primary": "shadow-[0_0_24px_rgba(94,106,210,0.2)]",
+      "glow_button_hover": "shadow-[0_0_32px_rgba(94,106,210,0.4)]",
+      "ambient": "shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+    },
+    "gradients": {
+      "mesh_bg": "radial-gradient(circle at 50% 0%, rgba(94,106,210,0.15), transparent 50%), radial-gradient(circle at 80% 50%, rgba(139,92,246,0.1), transparent 50%)",
+      "text": "bg-gradient-to-br from-white via-zinc-200 to-zinc-500 bg-clip-text text-transparent",
+      "button": "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6]"
+    },
+    "surfaces": {
+      "glassmorphism_nav": "backdrop-blur-xl bg-[#08090A]/70 border-b border-white/5",
+      "card_bento": "bg-[#121214] border border-white/5 rounded-2xl overflow-hidden hover:border-white/10 transition-colors"
+    }
+  },
+  "motion": {
+    "hover": "transition-colors duration-200 ease-out",
+    "press": "active:scale-[0.98] transition-transform",
+    "entrance_stagger": "framer-motion, variants com y: 20 e opacity: 0 -> y: 0, opacity: 1, duração de 0.4s"
+  },
+  "layout_patterns": {
+    "landing_page": {
+      "nav": "Top fixed, glassmorphism, Logo à esquerda, Links no centro, Botões (Entrar, Começar) à direita.",
+      "hero": "Mesh background escuro, H1 text_gradient centralizado, Subtítulo text-zinc-400. Botão principal com glow. Mockup do dashboard em 3D ou com perspectiva abaixo do hero.",
+      "bento_grid_modules": {
+        "description": "Grid para demonstrar CRM, Projetos, etc.",
+        "classes": "grid grid-cols-1 md:grid-cols-4 gap-4 p-4",
+        "structure": "CRM (col-span-2 row-span-2), OS (col-span-2 row-span-1), WhatsApp (col-span-1), Financeiro (col-span-1)"
+      },
+      "pricing": "Cards em row, fundo dark. Plano 'Growth' ou 'Business' em destaque com borda iluminada (--primary) e glow sutil. Botões largos.",
+      "testimonials": "Estilo Marquee contínuo (The Editorial Ribbon) com low contrast backgrounds e textos em zinc-300.",
+      "cta": "Sessão final com grande destaque, H2 imenso, fundo puro dark com glow de baixo para cima."
+    },
+    "app_shell": {
+      "layout": "Flex horizontal com Sidebar esquerda fixa e Content à direita.",
+      "sidebar": "w-64 bg-[#08090A] border-r border-white/5. Links com ícones lucide-react, active state tem bg-[#121214] e borda esquerda de 2px colorida.",
+      "topbar": "h-14 flex items-center justify-between px-6 border-b border-white/5 bg-[#08090A]/80 backdrop-blur-md sticky top-0 z-40. Contém Busca (⌘K), Copiloto Sparkle, Bell Notificações, Avatar.",
+      "command_palette": "Modal (Cmd+K) escuro, busca rápida por OS, Contatos, Projetos, com atalhos em Mono.",
+      "dashboard_home": "Bento style. KPIs no topo (4 colunas), gráfico principal no meio (col-span-3), últimos leads (col-span-1).",
+      "crm_kanban": "Flex overflow-x-auto, colunas w-80. Cards escuros, bg-[#121214], drag-and-drop. Tags coloridas em tons pasteis/escuros (ex: bg-blue-500/10 text-blue-400).",
+      "ordem_de_servico": "Tabela densa, tipografia Inter text-sm. Dialog de criação usando Sheet (lateral direita) do Shadcn para formulários complexos."
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-primary text-white hover:bg-primary_hover shadow-glow_primary rounded-md px-4 py-2 font-medium text-sm",
+      "secondary": "bg-transparent border border-white/10 text-white hover:bg-white/5 rounded-md px-4 py-2 font-medium text-sm"
+    },
+    "inputs": {
+      "default": "bg-[#121214] border border-white/10 text-white focus:border-primary focus:ring-1 focus:ring-primary rounded-md px-3 py-2 text-sm placeholder:text-zinc-500"
+    },
+    "toast": {
+      "library": "sonner",
+      "style": "bg-[#121214] border border-white/10 text-white rounded-lg shadow-xl"
+    }
+  },
+  "libraries": {
+    "icons": "lucide-react",
+    "motion": "framer-motion",
+    "ui": "shadcn/ui",
+    "toast": "sonner",
+    "charts": "recharts"
+  },
+  "image_urls": {
+    "team_collaboration": [
+      "https://images.pexels.com/photos/38759598/pexels-photo-38759598.jpeg",
+      "https://images.pexels.com/photos/38801413/pexels-photo-38801413.jpeg"
+    ]
+  }
 }
