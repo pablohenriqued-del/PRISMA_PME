@@ -511,6 +511,7 @@ class LeadIn(BaseModel):
     stage: str = "Lead"
     value: float = 0
     notes: str = ""
+    system: str = ""
 
 @api.get("/crm/leads")
 async def list_leads(user: dict = Depends(current_user)):
@@ -538,6 +539,7 @@ class LeadUpdate(BaseModel):
     value: Optional[float] = None
     stage: Optional[str] = None
     notes: Optional[str] = None
+    system: Optional[str] = None
 
 @api.patch("/crm/leads/{lead_id}")
 async def update_lead(lead_id: str, body: LeadUpdate, user: dict = Depends(current_user)):
@@ -755,36 +757,168 @@ async def task_time_manual(task_id: str, body: TimeLogIn, user: dict = Depends(c
     return {"ok": True, "log": log, "total_seconds": total}
 
 # ----------------- Financeiro -----------------
+class TxRecurrence(BaseModel):
+    enabled: bool = False
+    interval: Literal["weekly", "monthly", "quarterly", "yearly"] = "monthly"
+    next_at: Optional[str] = None
+
 class TxIn(BaseModel):
     description: str
     amount: float
     kind: Literal["receita", "despesa"]
-    date: str
-    status: str = "pago"
+    date: str                              # competência (YYYY-MM-DD)
+    due_date: Optional[str] = None         # vencimento
+    paid_date: Optional[str] = None
+    status: Literal["pendente", "pago", "vencido"] = "pago"
+    category: str = "Geral"
+    client_name: str = ""
+    notes: str = ""
+    recurrence: Optional[TxRecurrence] = None
+
+class TxUpdate(BaseModel):
+    description: Optional[str] = None
+    amount: Optional[float] = None
+    kind: Optional[Literal["receita", "despesa"]] = None
+    date: Optional[str] = None
+    due_date: Optional[str] = None
+    paid_date: Optional[str] = None
+    status: Optional[Literal["pendente", "pago", "vencido"]] = None
+    category: Optional[str] = None
+    client_name: Optional[str] = None
+    notes: Optional[str] = None
+    recurrence: Optional[TxRecurrence] = None
+
+def _apply_status_computed(t: dict) -> dict:
+    """Auto-mark as 'vencido' if pendente and due_date < today."""
+    if t.get("status") == "pendente" and t.get("due_date"):
+        try:
+            due = datetime.fromisoformat(t["due_date"])
+            if due.date() < datetime.now(timezone.utc).date():
+                t["status"] = "vencido"
+        except Exception:
+            pass
+    return t
 
 @api.get("/finance")
-async def list_tx(user: dict = Depends(current_user)):
-    items = await db.finance.find({"org_id": user["org_id"]}, {"_id": 0}).sort("date", -1).to_list(500)
+async def list_tx(
+    user: dict = Depends(current_user),
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+    kind: Optional[str] = None,
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+):
+    q: Dict[str, Any] = {"org_id": user["org_id"]}
+    if kind: q["kind"] = kind
+    if category: q["category"] = category
+    if date_from or date_to:
+        q["date"] = {}
+        if date_from: q["date"]["$gte"] = date_from
+        if date_to: q["date"]["$lte"] = date_to
+    items = await db.finance.find(q, {"_id": 0}).sort("date", -1).to_list(1000)
+    items = [_apply_status_computed(t) for t in items]
+    if status:
+        items = [t for t in items if t.get("status") == status]
     receita = sum(t["amount"] for t in items if t["kind"] == "receita")
     despesa = sum(t["amount"] for t in items if t["kind"] == "despesa")
-    return {"items": items, "receita": receita, "despesa": despesa, "saldo": receita - despesa}
+    a_receber = sum(t["amount"] for t in items if t["kind"] == "receita" and t.get("status") in ("pendente", "vencido"))
+    a_pagar   = sum(t["amount"] for t in items if t["kind"] == "despesa" and t.get("status") in ("pendente", "vencido"))
+    # Category breakdown
+    by_cat: Dict[str, float] = {}
+    for t in items:
+        if t["kind"] == "despesa":
+            by_cat[t.get("category", "Geral")] = by_cat.get(t.get("category", "Geral"), 0) + t["amount"]
+    categories = [{"name": k, "value": round(v, 2)} for k, v in sorted(by_cat.items(), key=lambda x: -x[1])]
+    return {
+        "items": items,
+        "receita": receita, "despesa": despesa, "saldo": receita - despesa,
+        "a_receber": a_receber, "a_pagar": a_pagar,
+        "categories": categories,
+    }
 
 @api.post("/finance")
 async def create_tx(body: TxIn, user: dict = Depends(current_user)):
     doc = body.model_dump()
     doc.update({"tx_id": gen_id("tx"), "org_id": user["org_id"], "created_at": iso(now_utc())})
+    if doc.get("status") == "pago" and not doc.get("paid_date"):
+        doc["paid_date"] = doc.get("date")
     await db.finance.insert_one(doc)
     doc.pop("_id", None)
-    if doc["status"] == "vencida":
+    if doc["status"] == "vencido":
         await run_automations(user["org_id"], "fatura_vencida", {
             "name": doc["description"], "subject": f"Fatura vencida: {doc['description']}",
         })
     return doc
 
+@api.patch("/finance/{tx_id}")
+async def update_tx(tx_id: str, body: TxUpdate, user: dict = Depends(current_user)):
+    upd = {k: v for k, v in body.model_dump().items() if v is not None}
+    if not upd:
+        return {"ok": True}
+    if upd.get("status") == "pago" and not upd.get("paid_date"):
+        upd["paid_date"] = datetime.now(timezone.utc).date().isoformat()
+    await db.finance.update_one({"tx_id": tx_id, "org_id": user["org_id"]}, {"$set": upd})
+    return {"ok": True}
+
 @api.delete("/finance/{tx_id}")
 async def delete_tx(tx_id: str, user: dict = Depends(current_user)):
     await db.finance.delete_one({"tx_id": tx_id, "org_id": user["org_id"]})
     return {"ok": True}
+
+@api.get("/finance/summary")
+async def finance_summary(user: dict = Depends(current_user)):
+    """DRE simplified + monthly comparison + 90-day projection based on pending items."""
+    from calendar import monthrange
+    today = datetime.now(timezone.utc).date()
+    m_start = today.replace(day=1).isoformat()
+    prev_month_last_day = (today.replace(day=1) - timedelta(days=1))
+    pm_start = prev_month_last_day.replace(day=1).isoformat()
+    pm_end = prev_month_last_day.isoformat()
+    all_items = await db.finance.find({"org_id": user["org_id"]}, {"_id": 0}).to_list(2000)
+    all_items = [_apply_status_computed(t) for t in all_items]
+
+    def sum_range(items, kind, start, end):
+        return sum(t["amount"] for t in items if t["kind"] == kind and start <= t.get("date", "") <= end)
+
+    m_end = today.isoformat()
+    cur_receita = sum_range(all_items, "receita", m_start, m_end)
+    cur_despesa = sum_range(all_items, "despesa", m_start, m_end)
+    prev_receita = sum_range(all_items, "receita", pm_start, pm_end)
+    prev_despesa = sum_range(all_items, "despesa", pm_start, pm_end)
+
+    # 90-day projection: pending items + recurrent
+    horizon_end = (today + timedelta(days=90)).isoformat()
+    projected_in = sum(t["amount"] for t in all_items if t["kind"] == "receita"
+                       and t.get("status") in ("pendente", "vencido")
+                       and (t.get("due_date") or "") <= horizon_end)
+    projected_out = sum(t["amount"] for t in all_items if t["kind"] == "despesa"
+                        and t.get("status") in ("pendente", "vencido")
+                        and (t.get("due_date") or "") <= horizon_end)
+
+    return {
+        "current_month": {"receita": cur_receita, "despesa": cur_despesa, "lucro": cur_receita - cur_despesa},
+        "previous_month": {"receita": prev_receita, "despesa": prev_despesa, "lucro": prev_receita - prev_despesa},
+        "projection_90d": {"receita": projected_in, "despesa": projected_out, "saldo": projected_in - projected_out},
+    }
+
+@api.get("/finance/export.csv")
+async def finance_export(user: dict = Depends(current_user)):
+    from fastapi.responses import Response
+    items = await db.finance.find({"org_id": user["org_id"]}, {"_id": 0}).sort("date", -1).to_list(5000)
+    items = [_apply_status_computed(t) for t in items]
+    rows = ["tx_id;description;kind;category;client;date;due_date;paid_date;status;amount"]
+    for t in items:
+        amt = f'{t.get("amount", 0):.2f}'.replace(".", ",")
+        rows.append(";".join([
+            t.get("tx_id",""), (t.get("description","") or "").replace(";", ","),
+            t.get("kind",""), t.get("category",""),
+            (t.get("client_name","") or "").replace(";", ","),
+            t.get("date",""), t.get("due_date","") or "",
+            t.get("paid_date","") or "", t.get("status",""), amt,
+        ]))
+    csv = "\ufeff" + "\n".join(rows)  # BOM for Excel
+    return Response(content=csv, media_type="text/csv; charset=utf-8",
+                    headers={"Content-Disposition": 'attachment; filename="financeiro.csv"'})
 
 # ----------------- Documentos (with upload) -----------------
 @api.get("/documents")
@@ -1892,7 +2026,7 @@ async def cop_list_reports(user: dict = Depends(current_user)):
 # ----------------- Public Sales PDF (one-page) -----------------
 @api.get("/public/apresentacao.pdf")
 async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = None):
-    """One-page elegant sales PDF for Prisma. Public, no auth."""
+    """One-page Dark SaaS sales PDF for Prisma. Public, no auth."""
     from reportlab.pdfgen import canvas as _canvas
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -1903,19 +2037,23 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     buf = _io.BytesIO()
     c = _canvas.Canvas(buf, pagesize=A4)
 
-    INK = colors.HexColor("#0A0A14")
-    PAPER = colors.HexColor("#F5F1EA")
-    MUTED = colors.HexColor("#6B6B75")
-    LINE = colors.HexColor("#D9D6CE")
-    EMERALD = colors.HexColor("#059669")
-    EMERALD_SOFT = colors.HexColor("#ECFDF5")
-    ROSE = colors.HexColor("#B91C1C")
-    ROSE_SOFT = colors.HexColor("#FEF2F2")
-    AMBER = colors.HexColor("#B45309")
-    AMBER_SOFT = colors.HexColor("#FFFBEB")
-    HAIRLINE = colors.HexColor("#E7E4DA")
+    # === Dark SaaS palette (mirrors index.css / design_guidelines.json) ===
+    BG        = colors.HexColor("#08090A")   # app background
+    SURFACE   = colors.HexColor("#121214")   # cards
+    SURFACE_2 = colors.HexColor("#1A1A1F")   # nested / darker header
+    BORDER    = colors.HexColor("#25252B")   # subtle borders (~rgba white 0.08)
+    TEXT      = colors.HexColor("#EDEDED")
+    TEXT_2    = colors.HexColor("#A1A1AA")
+    MUTED     = colors.HexColor("#71717A")
+    PURPLE    = colors.HexColor("#5E6AD2")   # brand primary
+    VIOLET    = colors.HexColor("#8B5CF6")   # brand secondary
+    CYAN      = colors.HexColor("#00E5FF")   # brand tertiary
+    EMERALD   = colors.HexColor("#10B981")
+    EMERALD_S = colors.HexColor("#064E3B")
+    ROSE      = colors.HexColor("#F87171")
+    AMBER     = colors.HexColor("#F59E0B")
 
-    def hline(x1, x2, y, col=HAIRLINE, w=0.5):
+    def hline(x1, x2, y, col=BORDER, w=0.5):
         c.setStrokeColor(col); c.setLineWidth(w); c.line(x1, y, x2, y)
 
     def draw_check(x, y, col=EMERALD, size=8):
@@ -1928,78 +2066,100 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
         c.setStrokeColor(col); c.setLineWidth(1.4); c.setLineCap(1)
         c.line(x, y, x + size, y + size); c.line(x, y + size, x + size, y)
 
-    # ===== Paper bg =====
-    c.setFillColor(PAPER); c.rect(0, 0, W, H, fill=1, stroke=0)
+    def gradient_bar(x, y, w, h, c1=PURPLE, c2=VIOLET, steps=48):
+        """Fake horizontal linear gradient (reportlab has no true gradient in base API)."""
+        r1, g1, b1 = c1.red, c1.green, c1.blue
+        r2, g2, b2 = c2.red, c2.green, c2.blue
+        sw = w / steps
+        for i in range(steps):
+            t = i / max(1, steps - 1)
+            c.setFillColorRGB(r1 + (r2 - r1) * t, g1 + (g2 - g1) * t, b1 + (b2 - b1) * t)
+            c.rect(x + i * sw, y, sw + 0.5, h, fill=1, stroke=0)
 
-    # ===== Header band =====
-    c.setFillColor(INK); c.rect(0, H - 55, W, 55, fill=1, stroke=0)
-    # Logo triangle
-    c.setFillColor(PAPER)
-    p = c.beginPath(); p.moveTo(50, H - 23); p.lineTo(72, H - 47); p.lineTo(28, H - 47); p.close()
+    # ===== Dark background =====
+    c.setFillColor(BG); c.rect(0, 0, W, H, fill=1, stroke=0)
+
+    # ===== Header band (dark surface with subtle bottom border) =====
+    c.setFillColor(SURFACE_2); c.rect(0, H - 62, W, 62, fill=1, stroke=0)
+    # bottom hairline
+    c.setStrokeColor(BORDER); c.setLineWidth(0.5); c.line(0, H - 62, W, H - 62)
+    # Logo — filled purple gradient tile with white triangle
+    gradient_bar(28, H - 50, 26, 26, c1=PURPLE, c2=VIOLET, steps=24)
+    c.setFillColor(colors.white)
+    p = c.beginPath(); p.moveTo(41, H - 30); p.lineTo(51, H - 46); p.lineTo(31, H - 46); p.close()
     c.drawPath(p, fill=1, stroke=0)
-    c.setFillColor(PAPER); c.setFont("Times-Italic", 18)
-    c.drawString(86, H - 33, "Prisma")
-    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 6.5)
-    c.drawString(86, H - 45, "PAINEL DE CONTROLE DA PME · pt-BR · PIX NATIVO")
-    c.setFillColor(PAPER); c.setFont("Helvetica", 7.5)
+    # Brand
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 15)
+    c.drawString(64, H - 32, "Prisma")
+    c.setFillColor(MUTED); c.setFont("Helvetica", 6.5)
+    c.drawString(64, H - 44, "PAINEL DE CONTROLE DA PME  ·  pt-BR  ·  PIX NATIVO")
+    # Right side header
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 7.5)
     c.drawRightString(W - 40, H - 28, "APRESENTAÇÃO COMERCIAL")
-    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 6.5)
+    c.setFillColor(MUTED); c.setFont("Helvetica", 6.5)
     c.drawRightString(W - 40, H - 43, datetime.now().strftime("%d de %B de %Y").upper())
 
     # ===== HERO =====
-    hero_top = H - 80
-    # Eyebrow
-    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
-    c.drawString(40, hero_top - 6, "SOFTWARE BRASILEIRO · IA NATIVA · PIX EMBUTIDO")
+    hero_top = H - 90
+    # Eyebrow (dot + label)
+    c.setFillColor(EMERALD); c.circle(46, hero_top - 4, 1.6, fill=1, stroke=0)
+    c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7)
+    c.drawString(53, hero_top - 6, "SOFTWARE BRASILEIRO  ·  IA NATIVA  ·  PIX EMBUTIDO")
 
-    # Big Headline (left)
-    c.setFillColor(INK)
+    # Big Headline (left) — white with purple highlight
     if para:
-        c.setFont("Times-Roman", 30); c.drawString(40, hero_top - 44, f"Feito sob medida")
-        c.setFont("Times-Italic", 30); c.drawString(40, hero_top - 76, f"para {para[:22]}.")
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 26)
+        c.drawString(40, hero_top - 40, "Feito sob medida")
+        # gradient headline for client name (approximation with violet)
+        c.setFillColor(VIOLET); c.setFont("Helvetica-Bold", 26)
+        c.drawString(40, hero_top - 70, f"para {para[:24]}.")
     else:
-        c.setFont("Times-Roman", 32); c.drawString(40, hero_top - 44, "Sua PME rodando em")
-        c.setFont("Times-Italic", 32); c.drawString(40, hero_top - 80, "piloto automático.")
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 28)
+        c.drawString(40, hero_top - 42, "Sua PME rodando em")
+        c.setFillColor(VIOLET); c.setFont("Helvetica-Bold", 28)
+        c.drawString(40, hero_top - 76, "piloto automático.")
 
     # Subtitle
-    c.setFillColor(MUTED); c.setFont("Helvetica", 9.5)
+    c.setFillColor(TEXT_2); c.setFont("Helvetica", 9.5)
     c.drawString(40, hero_top - 104, "CRM, WhatsApp, OS, Financeiro, Projetos e IA")
     c.drawString(40, hero_top - 118, "no mesmo painel. Sem trocar de aba.")
 
-    # ROI Right Card
+    # ROI Right Card (dark surface with purple glow accent bar)
     roi_x, roi_y, roi_w, roi_h = 330, hero_top - 138, W - 40 - 330, 128
-    c.setFillColor(INK); c.roundRect(roi_x, roi_y, roi_w, roi_h, 10, fill=1, stroke=0)
-    # subtle dots pattern top
-    c.setFillColor(colors.HexColor("#1a1a26"))
-    for dx in range(0, int(roi_w), 5):
-        for dy in range(0, 20, 5):
-            c.circle(roi_x + dx + 3, roi_y + roi_h - dy - 5, 0.4, fill=1, stroke=0)
-    c.setFillColor(colors.HexColor("#34D399")); c.setFont("Helvetica-Bold", 7)
+    c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.7)
+    c.roundRect(roi_x, roi_y, roi_w, roi_h, 10, fill=1, stroke=1)
+    # top gradient accent bar
+    gradient_bar(roi_x, roi_y + roi_h - 3, roi_w, 3, c1=PURPLE, c2=CYAN, steps=40)
+    # Label
+    c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 7)
     c.drawString(roi_x + 16, roi_y + roi_h - 22, "ECONOMIA ANUAL POR PME")
-    c.setFillColor(PAPER); c.setFont("Times-Roman", 42)
-    c.drawString(roi_x + 16, roi_y + roi_h - 66, "R$ 32.400")
-    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 8)
-    c.drawString(roi_x + 16, roi_y + roi_h - 82, "= 24h/semana × R$ 26/h × 52 semanas")
-    c.drawString(roi_x + 16, roi_y + roi_h - 94, "menos ferramenta, mais IA nativa")
-    # "se paga no 1º mês" pill (moved lower with more spacing)
-    c.setFillColor(colors.HexColor("#34D399"))
-    c.roundRect(roi_x + 16, roi_y + 8, 156, 18, 9, fill=1, stroke=0)
-    c.setFillColor(INK); c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(roi_x + 26, roi_y + 13, "SE PAGA NO 1º MÊS DE USO")
+    # Big number
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 34)
+    c.drawString(roi_x + 16, roi_y + roi_h - 60, "R$ 32.400")
+    c.setFillColor(TEXT_2); c.setFont("Helvetica", 7.5)
+    c.drawString(roi_x + 16, roi_y + roi_h - 76, "24h/semana  ×  R$ 26/h  ×  52 semanas")
+    c.drawString(roi_x + 16, roi_y + roi_h - 88, "menos ferramenta, mais IA nativa")
+    # pill
+    c.setFillColor(EMERALD_S); c.setStrokeColor(EMERALD); c.setLineWidth(0.6)
+    c.roundRect(roi_x + 16, roi_y + 10, 158, 18, 9, fill=1, stroke=1)
+    c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(roi_x + 26, roi_y + 15, "SE PAGA NO 1º MÊS DE USO")
 
     # ===== BEFORE / AFTER SPLIT =====
-    y = roi_y - 24
-    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    y = roi_y - 26
+    c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7)
     c.drawString(40, y, "SEM PRISMA  vs.  COM PRISMA")
     y -= 12
     col_w = (W - 80 - 12) / 2
     box_h = 100
 
-    # Left: SEM PRISMA
-    c.setFillColor(ROSE_SOFT); c.setStrokeColor(colors.HexColor("#FCA5A5")); c.setLineWidth(0.5)
+    # Left: SEM PRISMA (dark card, rose accent)
+    c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.6)
     c.roundRect(40, y - box_h, col_w, box_h, 8, fill=1, stroke=1)
+    # left rose bar
+    c.setFillColor(ROSE); c.roundRect(40, y - box_h, 3, box_h, 1, fill=1, stroke=0)
     c.setFillColor(ROSE); c.setFont("Helvetica-Bold", 9)
-    c.drawString(52, y - 18, "SEM PRISMA")
+    c.drawString(56, y - 18, "SEM PRISMA")
     pains = [
         "WhatsApp + planilha + Trello + e-mail — 5 abas abertas",
         "Cobrança manual, esquecida, sem PIX embutido",
@@ -2008,16 +2168,17 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     ]
     for i, t in enumerate(pains):
         py = y - 32 - i * 15
-        draw_x(52, py, size=7)
-        c.setFillColor(colors.HexColor("#1F1F1F")); c.setFont("Helvetica", 8)
-        c.drawString(66, py, t)
+        draw_x(56, py, size=7)
+        c.setFillColor(TEXT); c.setFont("Helvetica", 8)
+        c.drawString(70, py, t)
 
-    # Right: COM PRISMA
+    # Right: COM PRISMA (dark card, emerald accent)
     right_x = 40 + col_w + 12
-    c.setFillColor(EMERALD_SOFT); c.setStrokeColor(colors.HexColor("#6EE7B7")); c.setLineWidth(0.5)
+    c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.6)
     c.roundRect(right_x, y - box_h, col_w, box_h, 8, fill=1, stroke=1)
+    c.setFillColor(EMERALD); c.roundRect(right_x, y - box_h, 3, box_h, 1, fill=1, stroke=0)
     c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 9)
-    c.drawString(right_x + 12, y - 18, "COM PRISMA")
+    c.drawString(right_x + 16, y - 18, "COM PRISMA")
     wins = [
         "Um só painel · IA nativa · PIX direto no link",
         "OS assinada e paga em 30 segundos, no navegador",
@@ -2026,14 +2187,14 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     ]
     for i, t in enumerate(wins):
         py = y - 32 - i * 15
-        draw_check(right_x + 12, py, size=8)
-        c.setFillColor(colors.HexColor("#1F1F1F")); c.setFont("Helvetica", 8)
-        c.drawString(right_x + 26, py, t)
+        draw_check(right_x + 16, py, size=8)
+        c.setFillColor(TEXT); c.setFont("Helvetica", 8)
+        c.drawString(right_x + 30, py, t)
 
     # ===== PROVA SOCIAL · DEPOIMENTOS =====
     y = y - box_h - 26
-    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
-    c.drawString(40, y, "PROVA SOCIAL · CLIENTES REAIS · RESULTADOS QUANTIFICADOS")
+    c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, y, "PROVA SOCIAL  ·  CLIENTES REAIS  ·  RESULTADOS QUANTIFICADOS")
     y -= 8
 
     testimonials = [
@@ -2077,11 +2238,11 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     y -= t_h
     for i, t in enumerate(testimonials):
         x = 40 + i * (t_w + t_gap)
-        # Card
-        c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+        # Card (dark surface)
+        c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.6)
         c.roundRect(x, y, t_w, t_h, 8, fill=1, stroke=1)
-        # top accent bar (dark)
-        c.setFillColor(INK); c.roundRect(x, y + t_h - 3, 28, 3, 1, fill=1, stroke=0)
+        # top gradient accent bar
+        gradient_bar(x, y + t_h - 3, 40, 3, c1=PURPLE, c2=VIOLET, steps=20)
 
         # Photo circle at top-left
         cx, cy, cr = x + 20, y + t_h - 22, 11
@@ -2089,30 +2250,30 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
         if photo is not None:
             c.drawImage(photo, cx - cr, cy - cr, width=cr * 2, height=cr * 2, mask="auto")
         else:
-            c.setFillColor(INK); c.circle(cx, cy, cr, fill=1, stroke=0)
-            c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 10)
+            c.setFillColor(PURPLE); c.circle(cx, cy, cr, fill=1, stroke=0)
+            c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 10)
             c.drawCentredString(cx, cy - 3, t["author"][0])
-        # thin ring around photo
-        c.setStrokeColor(HAIRLINE); c.setLineWidth(0.6); c.setFillColor(colors.transparent) if False else None
+        # thin ring
+        c.setStrokeColor(BORDER); c.setLineWidth(0.6)
         c.circle(cx, cy, cr + 0.5, fill=0, stroke=1)
 
         # Author + role next to photo
-        c.setFillColor(INK); c.setFont("Helvetica-Bold", 8.5)
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 8.5)
         c.drawString(x + 38, y + t_h - 18, t["author"])
         c.setFillColor(MUTED); c.setFont("Helvetica", 6.5)
         c.drawString(x + 38, y + t_h - 28, t["role"])
 
-        # Big metric
-        c.setFillColor(INK); c.setFont("Times-Roman", 22)
+        # Big metric (violet)
+        c.setFillColor(VIOLET); c.setFont("Helvetica-Bold", 22)
         c.drawString(x + 12, y + t_h - 54, t["metric"])
         c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 6.5)
         c.drawString(x + 12, y + t_h - 64, t["metric_lbl"].upper()[:26])
 
         # Divider
-        hline(x + 12, x + t_w - 12, y + t_h - 70, col=HAIRLINE, w=0.4)
+        hline(x + 12, x + t_w - 12, y + t_h - 70, col=BORDER, w=0.5)
 
         # Quote (wrapped, up to 3 lines)
-        c.setFillColor(colors.HexColor("#3A3A45")); c.setFont("Helvetica-Oblique", 7.5)
+        c.setFillColor(TEXT_2); c.setFont("Helvetica-Oblique", 7.5)
         words = t["quote"].split(" ")
         line = ""
         row = 0
@@ -2131,13 +2292,14 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
 
     # ===== 3 STEPS FLOW =====
     y = y - 30
-    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7)
     c.drawString(40, y, "COMO FUNCIONA")
-    c.setFillColor(INK); c.setFont("Times-Roman", 14)
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 14)
     c.drawString(40, y - 18, "Em ")
-    c.setFont("Times-Italic", 14); c.drawString(40 + c.stringWidth("Em ", "Times-Roman", 14), y - 18, "3 passos")
-    c.setFont("Times-Roman", 14)
-    c.drawString(40 + c.stringWidth("Em ", "Times-Roman", 14) + c.stringWidth("3 passos", "Times-Italic", 14), y - 18, ", do lead ao caixa.")
+    c.setFillColor(VIOLET); c.setFont("Helvetica-Bold", 14)
+    c.drawString(40 + c.stringWidth("Em ", "Helvetica-Bold", 14), y - 18, "3 passos")
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 14)
+    c.drawString(40 + c.stringWidth("Em ", "Helvetica-Bold", 14) + c.stringWidth("3 passos", "Helvetica-Bold", 14), y - 18, ", do lead ao caixa.")
 
     steps = [
         ("1", "Cliente chega no WhatsApp", "Vira card no CRM. Copiloto lê o histórico e sugere a proposta."),
@@ -2149,16 +2311,21 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     y -= 96
     for i, (n, t, d) in enumerate(steps):
         x = 40 + i * (step_w + step_gap)
-        c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+        c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.6)
         c.roundRect(x, y, step_w, 66, 8, fill=1, stroke=1)
-        # circle number
-        c.setFillColor(INK); c.circle(x + 20, y + 46, 10, fill=1, stroke=0)
-        c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 10)
+        # gradient circle number
+        c.saveState()
+        p = c.beginPath(); p.circle(x + 20, y + 46, 10)
+        c.clipPath(p, stroke=0, fill=0)
+        gradient_bar(x + 8, y + 34, 24, 24, c1=PURPLE, c2=VIOLET, steps=20)
+        c.restoreState()
+        c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 10)
         c.drawCentredString(x + 20, y + 43, n)
-        c.setFillColor(INK); c.setFont("Helvetica-Bold", 9)
+        # title
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 9)
         c.drawString(x + 40, y + 46, t)
-        c.setFillColor(MUTED); c.setFont("Helvetica", 7.5)
-        # wrap simple
+        # description (wrapped)
+        c.setFillColor(TEXT_2); c.setFont("Helvetica", 7.5)
         words = d.split(" ")
         line = ""
         row = 0
@@ -2173,8 +2340,8 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
 
     # ===== PRICING =====
     y = y - 22
-    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
-    c.drawString(40, y, "PLANOS · EM REAIS · SEM PEGADINHA")
+    c.setFillColor(MUTED); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, y, "PLANOS  ·  EM REAIS  ·  SEM PEGADINHA")
 
     plans = [
         {"n": "Free", "p": "R$ 0", "s": "para sempre", "hl": False,
@@ -2191,76 +2358,82 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     for i, pl in enumerate(plans):
         x = 40 + i * (p_w + p_gap)
         if pl["hl"]:
-            c.setFillColor(INK); c.setStrokeColor(INK); c.roundRect(x, y, p_w, p_h, 8, fill=1, stroke=1)
-            title_col = PAPER; muted_col = colors.HexColor("#B6B4A9"); check_col = colors.HexColor("#34D399")
-        else:
-            c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+            # Highlighted: purple-glow background
+            c.setFillColor(SURFACE); c.setStrokeColor(PURPLE); c.setLineWidth(1.2)
             c.roundRect(x, y, p_w, p_h, 8, fill=1, stroke=1)
-            title_col = INK; muted_col = MUTED; check_col = EMERALD
-        c.setFillColor(title_col); c.setFont("Helvetica-Bold", 10)
-        c.drawString(x + 12, y + p_h - 18, pl["n"])
+            # inner tint bar top
+            gradient_bar(x, y + p_h - 4, p_w, 4, c1=PURPLE, c2=VIOLET, steps=40)
+        else:
+            c.setFillColor(SURFACE); c.setStrokeColor(BORDER); c.setLineWidth(0.6)
+            c.roundRect(x, y, p_w, p_h, 8, fill=1, stroke=1)
+        # Plan name
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 10)
+        c.drawString(x + 14, y + p_h - 20, pl["n"])
         if pl["hl"]:
-            c.setFillColor(colors.HexColor("#34D399")); c.roundRect(x + p_w - 88, y + p_h - 22, 76, 14, 7, fill=1, stroke=0)
-            c.setFillColor(INK); c.setFont("Helvetica-Bold", 6.5)
-            c.drawCentredString(x + p_w - 50, y + p_h - 17, "RECOMENDADO")
-        c.setFillColor(title_col); c.setFont("Times-Roman", 22)
-        c.drawString(x + 12, y + p_h - 44, pl["p"])
-        c.setFillColor(muted_col); c.setFont("Helvetica", 7.5)
-        c.drawString(x + 12 + c.stringWidth(pl["p"], "Times-Roman", 22) + 4, y + p_h - 41, pl["s"])
+            # recommended pill
+            gradient_bar(x + p_w - 88, y + p_h - 24, 76, 14, c1=PURPLE, c2=VIOLET, steps=30)
+            c.setFillColor(colors.white); c.setFont("Helvetica-Bold", 6.5)
+            c.drawCentredString(x + p_w - 50, y + p_h - 19, "RECOMENDADO")
+        # Price
+        c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 22)
+        c.drawString(x + 14, y + p_h - 48, pl["p"])
+        c.setFillColor(MUTED); c.setFont("Helvetica", 7.5)
+        c.drawString(x + 14 + c.stringWidth(pl["p"], "Helvetica-Bold", 22) + 4, y + p_h - 45, pl["s"])
         # Features
         for j, feat in enumerate(pl["f"]):
-            fy = y + p_h - 62 - j * 11
-            draw_check(x + 12, fy - 1, col=check_col, size=7)
-            c.setFillColor(title_col); c.setFont("Helvetica", 7.5)
-            c.drawString(x + 24, fy, feat[:40])
+            fy = y + p_h - 66 - j * 11
+            draw_check(x + 14, fy - 1, col=EMERALD, size=7)
+            c.setFillColor(TEXT_2); c.setFont("Helvetica", 7.5)
+            c.drawString(x + 26, fy, feat[:40])
 
-    # Founder deal strip
+    # Founder deal strip (amber accent on dark surface)
     fd_y = y - 10
-    c.setFillColor(AMBER_SOFT); c.setStrokeColor(colors.HexColor("#F59E0B")); c.setLineWidth(0.8)
-    c.roundRect(40, fd_y - 30, W - 80, 30, 6, fill=1, stroke=1)
+    c.setFillColor(SURFACE); c.setStrokeColor(AMBER); c.setLineWidth(0.8)
+    c.roundRect(40, fd_y - 32, W - 80, 32, 6, fill=1, stroke=1)
+    # dashed effect: draw small tick marks
     c.setFillColor(AMBER); c.setFont("Helvetica-Bold", 7)
-    c.drawString(52, fd_y - 12, "FOUNDER DEAL · VAGAS LIMITADAS")
-    c.setFillColor(INK); c.setFont("Times-Roman", 12); c.drawString(52, fd_y - 26, "R$ 4.997 à vista = 3 anos de Growth")
+    c.drawString(54, fd_y - 12, "FOUNDER DEAL  ·  VAGAS LIMITADAS")
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 13)
+    c.drawString(54, fd_y - 27, "R$ 4.997 à vista = 3 anos de Growth")
     c.setFillColor(MUTED); c.setFont("Helvetica", 7.5)
-    c.drawRightString(W - 52, fd_y - 20, "Trave o preço hoje. Depois vira Growth normal em 36 meses.")
+    c.drawRightString(W - 54, fd_y - 20, "Trave o preço hoje. Depois vira Growth normal em 36 meses.")
 
     # ===== FOOTER =====
-    footer_h = 78
-    c.setFillColor(INK); c.rect(0, 0, W, footer_h, fill=1, stroke=0)
-    # subtle grain
-    c.setFillColor(colors.HexColor("#151520"))
-    for dx in range(0, int(W), 4):
-        for dy in range(0, footer_h, 4):
-            c.circle(dx + 2, dy + 2, 0.3, fill=1, stroke=0)
+    footer_h = 82
+    c.setFillColor(SURFACE_2); c.rect(0, 0, W, footer_h, fill=1, stroke=0)
+    # top hairline
+    c.setStrokeColor(BORDER); c.setLineWidth(0.5); c.line(0, footer_h, W, footer_h)
+    # gradient stripe at very top of footer
+    gradient_bar(0, footer_h - 2, W, 2, c1=PURPLE, c2=CYAN, steps=60)
 
-    # QR code
+    # QR code (dark theme)
     qr_url = "https://pme-all-in-one.preview.emergentagent.com/apresentacao"
     if para: qr_url += f"?para={para.replace(' ', '+')}"
     if valor: qr_url += f"{'&' if '?' in qr_url else '?'}valor={int(valor)}"
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=6, border=1)
     qr.add_data(qr_url); qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="#F5F1EA", back_color="#0A0A14").convert("RGB")
+    qr_img = qr.make_image(fill_color="#EDEDED", back_color="#1A1A1F").convert("RGB")
     qr_buf = _io.BytesIO(); qr_img.save(qr_buf, format="PNG"); qr_buf.seek(0)
-    c.drawImage(ImageReader(qr_buf), W - 82, 14, width=52, height=52, mask="auto")
-    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 5.5)
-    c.drawCentredString(W - 56, 8, "escaneie · apresentação online")
+    c.drawImage(ImageReader(qr_buf), W - 82, 16, width=52, height=52, mask="auto")
+    c.setFillColor(MUTED); c.setFont("Helvetica", 5.5)
+    c.drawCentredString(W - 56, 10, "escaneie · apresentação online")
 
     # CTA copy
-    c.setFillColor(PAPER); c.setFont("Times-Italic", 16)
-    c.drawString(40, 52, "Sua PME merece rodar sozinha.")
-    c.setFillColor(colors.HexColor("#34D399")); c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(40, 36, "TESTE 30 DIAS GRÁTIS  ·  CANCELE QUANDO QUISER")
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 16)
+    c.drawString(40, 54, "Sua PME merece rodar sozinha.")
+    c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 7.5)
+    c.drawString(40, 38, "TESTE 30 DIAS GRÁTIS  ·  CANCELE QUANDO QUISER")
 
-    # Contact info (updated per user request)
-    c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 9)
+    # Contact info
+    c.setFillColor(TEXT); c.setFont("Helvetica-Bold", 9)
     c.drawString(40, 20, "Pablo Henrique")
-    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 8.5)
+    c.setFillColor(TEXT_2); c.setFont("Helvetica", 8.5)
     contact_line = "pablohenriqued@gmail.com  ·  (21) 97211-5110"
     c.drawString(40 + c.stringWidth("Pablo Henrique", "Helvetica-Bold", 9) + 10, 20, contact_line)
 
     if valor:
-        c.setFillColor(colors.HexColor("#34D399")); c.setFont("Helvetica-Bold", 8)
-        c.drawRightString(W - 100, 44, f"Proposta pré-preenchida: R$ {valor:,.2f}")
+        c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 8)
+        c.drawRightString(W - 100, 46, f"Proposta pré-preenchida: R$ {valor:,.2f}")
 
     c.showPage(); c.save()
     buf.seek(0)

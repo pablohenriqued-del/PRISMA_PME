@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, GripVertical, Trash2, Mail, Phone, Building2 } from "lucide-react";
+import { Plus, GripVertical, Trash2, Mail, Phone, Building2, Boxes } from "lucide-react";
 import { toast } from "sonner";
 
 const STAGES = ["Lead", "Contato Feito", "Proposta", "Negociação", "Ganho", "Perdido"];
@@ -19,9 +19,21 @@ const STAGE_HUE = {
   "Perdido": "hsl(8 84% 65% / 0.30)",
 };
 
+// Produtos/sistemas do portfólio Emerald que estamos tentando vender
+const SYSTEMS = [
+  { key: "BR_PREDICT", label: "BR PREDICT", desc: "Análise preditiva",   color: "text-cyan-300 bg-cyan-500/10 border-cyan-500/25" },
+  { key: "PLENUS",     label: "PLENUS",     desc: "Gabinete",             color: "text-blue-300 bg-blue-500/10 border-blue-500/25" },
+  { key: "PROVENANCE", label: "PROVENANCE", desc: "Galerias",             color: "text-fuchsia-300 bg-fuchsia-500/10 border-fuchsia-500/25" },
+  { key: "MA",         label: "M&A",        desc: "Aquisições e Fusões",  color: "text-amber-300 bg-amber-500/10 border-amber-500/25" },
+  { key: "CJUDI",      label: "CJUDI",      desc: "Jurídico",             color: "text-rose-300 bg-rose-500/10 border-rose-500/25" },
+  { key: "PMO",        label: "PMO",        desc: "Gestão de Projetos",   color: "text-emerald-300 bg-emerald-500/10 border-emerald-500/25" },
+  { key: "PRISMA",     label: "PRISMA",     desc: "PME",                  color: "text-[#c9c2ff] bg-[#5E6AD2]/15 border-[#5E6AD2]/40" },
+];
+const SYSTEMS_BY_KEY = Object.fromEntries(SYSTEMS.map((s) => [s.key, s]));
+
 const brl = (n) => (n ?? 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 
-const EMPTY = { name: "", company: "", email: "", phone: "", value: 0, stage: "Lead", notes: "" };
+const EMPTY = { name: "", company: "", email: "", phone: "", value: 0, stage: "Lead", notes: "", system: "" };
 
 export default function CRM() {
   const [leads, setLeads] = useState([]);
@@ -64,6 +76,7 @@ export default function CRM() {
       value: lead.value ?? 0,
       stage: lead.stage || "Lead",
       notes: lead.notes || "",
+      system: lead.system || "",
     });
   };
 
@@ -78,6 +91,7 @@ export default function CRM() {
       value: Number(editing.value) || 0,
       stage: editing.stage,
       notes: editing.notes,
+      system: editing.system || "",
     };
     try {
       await api.patch(`/crm/leads/${editing.lead_id}`, payload);
@@ -138,6 +152,21 @@ export default function CRM() {
                     </Select>
                   </div>
                 </div>
+                <div>
+                  <Label className="flex items-center gap-1.5"><Boxes className="h-3.5 w-3.5" /> Sistema oferecido</Label>
+                  <Select value={form.system || "__none__"} onValueChange={(v) => setForm({ ...form, system: v === "__none__" ? "" : v })}>
+                    <SelectTrigger data-testid="lead-system"><SelectValue placeholder="Selecione um sistema" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">— não definido —</SelectItem>
+                      {SYSTEMS.map((s) => (
+                        <SelectItem key={s.key} value={s.key}>
+                          <span className="font-mono text-xs mr-2">{s.label}</span>
+                          <span className="text-zinc-500">· {s.desc}</span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
                 <div><Label>Notas</Label><Textarea rows={3} data-testid="lead-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
                 <DialogFooter><Button type="submit" data-testid="save-lead-btn" className="bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] hover:opacity-90 text-white">Salvar</Button></DialogFooter>
               </form>
@@ -183,6 +212,16 @@ export default function CRM() {
                         </div>
                         <GripVertical className="h-3.5 w-3.5 text-zinc-600 opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
+                      {l.system && SYSTEMS_BY_KEY[l.system] && (
+                        <div className="mt-2">
+                          <span
+                            data-testid={`lead-system-${l.lead_id}`}
+                            className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono uppercase tracking-wider border ${SYSTEMS_BY_KEY[l.system].color}`}
+                          >
+                            {SYSTEMS_BY_KEY[l.system].label}
+                          </span>
+                        </div>
+                      )}
                       <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs font-mono text-zinc-300">{brl(l.value)}</div>
                         <div className="flex items-center gap-1">
@@ -228,6 +267,21 @@ export default function CRM() {
                     <SelectContent>{STAGES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
+              </div>
+              <div>
+                <Label className="flex items-center gap-1.5"><Boxes className="h-3.5 w-3.5" /> Sistema oferecido</Label>
+                <Select value={editing.system || "__none__"} onValueChange={(v) => setEditing({ ...editing, system: v === "__none__" ? "" : v })}>
+                  <SelectTrigger data-testid="edit-system"><SelectValue placeholder="Selecione um sistema" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">— não definido —</SelectItem>
+                    {SYSTEMS.map((s) => (
+                      <SelectItem key={s.key} value={s.key}>
+                        <span className="font-mono text-xs mr-2">{s.label}</span>
+                        <span className="text-zinc-500">· {s.desc}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div><Label>Notas</Label><Textarea rows={4} data-testid="edit-notes" value={editing.notes} onChange={(e) => setEditing({ ...editing, notes: e.target.value })} placeholder="Contexto do relacionamento, próximos passos, objeções…" /></div>
               <DialogFooter className="flex items-center gap-2">
