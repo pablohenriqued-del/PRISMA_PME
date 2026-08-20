@@ -5,16 +5,16 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, X, Zap, ListChecks, FileSignature, BarChart3, Sparkles, Loader2, ClipboardCopy } from "lucide-react";
+import { Send, X, Zap, ListChecks, FileSignature, BarChart3, Sparkles, Loader2, ClipboardCopy, FileText, Download, ExternalLink } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 import api from "@/lib/api";
 import { toast } from "sonner";
 
 const SUGGESTIONS = [
+  "Gere apresentação para Padaria Bella por 4500",
   "Resuma os leads em Negociação",
   "Sugira automações para meu financeiro",
   "Modelo de mensagem de cobrança no WhatsApp",
-  "Como estruturar meu funil de vendas?",
 ];
 
 // --- Quick action dialogs ---
@@ -206,6 +206,31 @@ export default function Copilot({ open, onOpenChange, moduleName }) {
     if (/^(ger(e|ar)|criar?|fazer?)\s+(uma )?propost/.test(lower)) { setProposalOpen(true); return; }
     if (/^(ger(e|ar)|criar?|fazer?)\s+(um )?relatori/.test(lower)) { setReportOpen(true); return; }
 
+    // Intent: "gere apresentacao para <cliente> [por/de/no valor de <valor>]"
+    const presMatch = msg.match(/(?:ger[ae]|criar?|nova|fazer?|monta[re]?)\s+(?:uma\s+)?apresenta(?:c|ç)(?:a|ã)o(?:\s+comercial)?\s+(?:para|do|da|de)\s+(.+?)(?:\s+(?:por|no valor de|valor de|de|com|em)\s+R?\$?\s*([\d.,]+))?[.!?]?$/i);
+    if (presMatch) {
+      const cliente = presMatch[1].trim().replace(/\s+/g, " ").replace(/[.!?,]+$/, "");
+      const rawValor = presMatch[2];
+      let valor = null;
+      if (rawValor) {
+        const clean = rawValor.replace(/\./g, "").replace(",", ".");
+        const n = parseFloat(clean);
+        if (!isNaN(n)) valor = Math.round(n);
+      }
+      const params = new URLSearchParams({ para: cliente });
+      if (valor) params.set("valor", String(valor));
+      const pdfUrl = `${API_BASE}/public/apresentacao.pdf?${params.toString()}`;
+      const pageUrl = `${window.location.origin}/apresentacao?${params.toString()}`;
+      setInput("");
+      setMessages((m) => [
+        ...m,
+        { role: "user", content: msg },
+        { role: "assistant", type: "presentation", cliente, valor, pdfUrl, pageUrl },
+      ]);
+      toast.success(`Apresentação para ${cliente} pronta`);
+      return;
+    }
+
     setInput("");
     setMessages((m) => [...m, { role: "user", content: msg }, { role: "assistant", content: "" }]);
     setStreaming(true);
@@ -305,7 +330,7 @@ export default function Copilot({ open, onOpenChange, moduleName }) {
                   <h3 className="font-display text-2xl font-light tracking-tight">
                     Vamos avançar em <span className="font-medium">{moduleName.toLowerCase()}</span>.
                   </h3>
-                  <p className="text-xs text-zinc-500 mt-2">Dica: peça &quot;crie uma tarefa…&quot;, &quot;gere uma proposta para…&quot; ou &quot;gere um relatório…&quot; e eu abro a ação certa.</p>
+                  <p className="text-xs text-zinc-500 mt-2">Dica: peça &quot;crie uma tarefa…&quot;, &quot;gere uma proposta para…&quot;, &quot;gere um relatório…&quot; ou &quot;gere apresentação para X por Y&quot; e eu abro a ação certa.</p>
                 </div>
                 <div className="grid grid-cols-1 gap-2">
                   {SUGGESTIONS.map((s) => (
@@ -331,15 +356,64 @@ export default function Copilot({ open, onOpenChange, moduleName }) {
                     </svg>
                   </div>
                 )}
-                <div
-                  className={`max-w-[85%] rounded-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
-                    m.role === "user"
-                      ? "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white"
-                      : "bg-[#121214]/5 text-white"
-                  }`}
-                >
-                  {m.content || (streaming && i === messages.length - 1 ? "…" : "")}
-                </div>
+                {m.type === "presentation" ? (
+                  <div
+                    data-testid={`cop-presentation-${i}`}
+                    className="max-w-[88%] w-full rounded-xl border border-[#5E6AD2]/30 bg-gradient-to-br from-[#5E6AD2]/[0.08] via-[#121214] to-[#121214] p-4 shadow-[0_0_24px_rgba(94,106,210,0.15)]"
+                  >
+                    <div className="flex items-start gap-2.5">
+                      <div className="h-8 w-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0">
+                        <FileText className="h-4 w-4 text-[#8B5CF6]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[10px] font-mono uppercase tracking-widest text-zinc-500">Apresentação comercial</div>
+                        <div className="text-sm font-medium text-zinc-100 mt-0.5 truncate">para {m.cliente}</div>
+                        {m.valor != null && (
+                          <div className="text-xs text-emerald-400 mt-1 font-medium">
+                            R$ {m.valor.toLocaleString("pt-BR")} <span className="text-zinc-500 font-normal">· pré-preenchido no PDF</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 gap-2">
+                      <a
+                        href={m.pdfUrl} target="_blank" rel="noopener noreferrer"
+                        data-testid="cop-pres-pdf"
+                        className="inline-flex items-center gap-2 h-9 px-3 rounded-md bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white text-xs justify-center hover:opacity-95 shadow-[0_0_16px_rgba(94,106,210,0.35)]"
+                      >
+                        <Download className="h-3.5 w-3.5" /> Baixar PDF one-page
+                      </a>
+                      <div className="grid grid-cols-2 gap-2">
+                        <a
+                          href={m.pageUrl} target="_blank" rel="noopener noreferrer"
+                          data-testid="cop-pres-page"
+                          className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-white/10 bg-white/[0.03] text-zinc-200 text-xs justify-center hover:bg-white/[0.06]"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> Página online
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => { navigator.clipboard.writeText(m.pageUrl); toast.success("Link copiado"); }}
+                          data-testid="cop-pres-copy"
+                          className="inline-flex items-center gap-2 h-9 px-3 rounded-md border border-white/10 bg-white/[0.03] text-zinc-300 text-xs justify-center hover:text-white hover:bg-white/[0.06]"
+                        >
+                          <ClipboardCopy className="h-3.5 w-3.5" /> Copiar link
+                        </button>
+                      </div>
+                    </div>
+                    <div className="mt-3 text-[10px] text-zinc-500">Cliente vê no navegador ou baixa o PDF. Nada precisa ser instalado.</div>
+                  </div>
+                ) : (
+                  <div
+                    className={`max-w-[85%] rounded-md px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap ${
+                      m.role === "user"
+                        ? "bg-gradient-to-r from-[#5E6AD2] to-[#8B5CF6] text-white"
+                        : "bg-[#121214]/5 text-white"
+                    }`}
+                  >
+                    {m.content || (streaming && i === messages.length - 1 ? "…" : "")}
+                  </div>
+                )}
               </div>
             ))}
           </div>
