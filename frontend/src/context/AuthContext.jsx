@@ -34,8 +34,17 @@ export function AuthProvider({ children }) {
     window.location.href = "/login";
   };
 
+  const loginWithGoogle = useCallback(() => {
+    // Emergent Managed Google Auth flow:
+    // 1) redirect user to auth.emergentagent.com with our callback URL
+    // 2) provider redirects back to /auth/callback#session_id=xxx
+    // 3) AuthCallback.jsx exchanges session_id via POST /api/auth/session
+    const redirect = `${window.location.origin}/auth/callback`;
+    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirect)}`;
+  }, []);
+
   return (
-    <AuthCtx.Provider value={{ user, setUser, loading, checkAuth, logout }}>
+    <AuthCtx.Provider value={{ user, setUser, loading, checkAuth, logout, loginWithGoogle }}>
       {children}
     </AuthCtx.Provider>
   );
