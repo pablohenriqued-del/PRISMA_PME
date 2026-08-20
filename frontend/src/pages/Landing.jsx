@@ -121,7 +121,7 @@ export default function Landing() {
             <button data-testid="hero-cta" onClick={primaryCta} className="btn-primary text-base h-12 px-6">Começar grátis <ArrowRight className="h-4 w-4" /></button>
             <a href="#fluxo" className="btn-secondary text-base h-12 px-6"><Play className="h-3.5 w-3.5" /> Ver como funciona</a>
             <div className="flex items-center gap-2 text-xs text-zinc-500 ml-2">
-              <ShieldCheck className="h-3.5 w-3.5" /> Free vitalício · sem cartão
+              <ShieldCheck className="h-3.5 w-3.5" /> 30 dias grátis
             </div>
           </motion.div>
 

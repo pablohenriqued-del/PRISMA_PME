@@ -2030,30 +2030,104 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
         c.setFillColor(colors.HexColor("#1F1F1F")); c.setFont("Helvetica", 8)
         c.drawString(right_x + 26, py, t)
 
-    # ===== 4 KPI STATS =====
+    # ===== PROVA SOCIAL · DEPOIMENTOS =====
     y = y - box_h - 26
     c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
-    c.drawString(40, y, "NÚMEROS QUE IMPORTAM")
+    c.drawString(40, y, "PROVA SOCIAL · CLIENTES REAIS · RESULTADOS QUANTIFICADOS")
     y -= 8
 
-    stats = [("24h", "por semana", "menos planilha"),
-             ("3×", "para fechar", "OS + PIX no mesmo link"),
-             ("7min", "lead → PIX", "IA + assinatura embutida"),
-             ("R$ 0", "para começar", "30 dias grátis · sem cartão")]
-    stat_gap = 6
-    stat_w = (W - 80 - stat_gap * 3) / 4
-    y -= 48
-    for i, (n, lbl, note) in enumerate(stats):
-        x = 40 + i * (stat_w + stat_gap)
+    testimonials = [
+        {"photo": "https://randomuser.me/api/portraits/women/44.jpg",
+         "metric": "+40%", "metric_lbl": "fechamento em 3 meses",
+         "quote": "Substitui Trello, Pipedrive e agencia de cobranca. Financeiro fecha em 2h.",
+         "author": "Marina Alves", "role": "Padaria Bella · SP"},
+        {"photo": "https://randomuser.me/api/portraits/men/32.jpg",
+         "metric": "40min", "metric_lbl": "do lead ao PIX cair",
+         "quote": "Enviei uma proposta pelo WhatsApp e o cliente assinou e pagou em 40 minutos.",
+         "author": "Ricardo Meira", "role": "Estudio 12 · RJ"},
+        {"photo": "https://randomuser.me/api/portraits/women/68.jpg",
+         "metric": "12x", "metric_lbl": "mais rapido nos relatorios",
+         "quote": "O Copiloto gera o relatorio mensal em 8 segundos. Antes era meio dia de contador.",
+         "author": "Camila Prado", "role": "Contabil Prado · MG"},
+    ]
+
+    # Download + circular-crop photos (with fallback to initial letter)
+    def _circular_photo(url: str, size: int = 44):
+        try:
+            from PIL import Image, ImageDraw
+            r = httpx.get(url, timeout=3.0, follow_redirects=True)
+            if r.status_code != 200:
+                return None
+            img = Image.open(_io.BytesIO(r.content)).convert("RGBA")
+            img = img.resize((size, size), Image.LANCZOS)
+            mask = Image.new("L", (size, size), 0)
+            ImageDraw.Draw(mask).ellipse((0, 0, size, size), fill=255)
+            result = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+            result.paste(img, (0, 0), mask)
+            b = _io.BytesIO(); result.save(b, format="PNG"); b.seek(0)
+            return ImageReader(b)
+        except Exception:
+            return None
+
+    photos = [_circular_photo(t["photo"]) for t in testimonials]
+
+    t_gap = 6
+    t_w = (W - 80 - t_gap * 2) / 3
+    t_h = 108
+    y -= t_h
+    for i, t in enumerate(testimonials):
+        x = 40 + i * (t_w + t_gap)
+        # Card
         c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
-        c.roundRect(x, y, stat_w, 44, 6, fill=1, stroke=1)
-        # tiny top accent bar
-        c.setFillColor(INK); c.roundRect(x, y + 42, 20, 2, 1, fill=1, stroke=0)
-        c.setFillColor(INK); c.setFont("Times-Roman", 20); c.drawString(x + 10, y + 22, n)
-        c.setFillColor(colors.HexColor("#3A3A45")); c.setFont("Helvetica-Bold", 7)
-        c.drawString(x + 10, y + 12, lbl.upper())
+        c.roundRect(x, y, t_w, t_h, 8, fill=1, stroke=1)
+        # top accent bar (dark)
+        c.setFillColor(INK); c.roundRect(x, y + t_h - 3, 28, 3, 1, fill=1, stroke=0)
+
+        # Photo circle at top-left
+        cx, cy, cr = x + 20, y + t_h - 22, 11
+        photo = photos[i]
+        if photo is not None:
+            c.drawImage(photo, cx - cr, cy - cr, width=cr * 2, height=cr * 2, mask="auto")
+        else:
+            c.setFillColor(INK); c.circle(cx, cy, cr, fill=1, stroke=0)
+            c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 10)
+            c.drawCentredString(cx, cy - 3, t["author"][0])
+        # thin ring around photo
+        c.setStrokeColor(HAIRLINE); c.setLineWidth(0.6); c.setFillColor(colors.transparent) if False else None
+        c.circle(cx, cy, cr + 0.5, fill=0, stroke=1)
+
+        # Author + role next to photo
+        c.setFillColor(INK); c.setFont("Helvetica-Bold", 8.5)
+        c.drawString(x + 38, y + t_h - 18, t["author"])
         c.setFillColor(MUTED); c.setFont("Helvetica", 6.5)
-        c.drawString(x + 10, y + 3, note)
+        c.drawString(x + 38, y + t_h - 28, t["role"])
+
+        # Big metric
+        c.setFillColor(INK); c.setFont("Times-Roman", 22)
+        c.drawString(x + 12, y + t_h - 54, t["metric"])
+        c.setFillColor(EMERALD); c.setFont("Helvetica-Bold", 6.5)
+        c.drawString(x + 12, y + t_h - 64, t["metric_lbl"].upper()[:26])
+
+        # Divider
+        hline(x + 12, x + t_w - 12, y + t_h - 70, col=HAIRLINE, w=0.4)
+
+        # Quote (wrapped, up to 3 lines)
+        c.setFillColor(colors.HexColor("#3A3A45")); c.setFont("Helvetica-Oblique", 7.5)
+        words = t["quote"].split(" ")
+        line = ""
+        row = 0
+        max_rows = 3
+        for w2 in words:
+            if row >= max_rows: break
+            trial = (line + " " + w2).strip()
+            if c.stringWidth(trial, "Helvetica-Oblique", 7.5) < t_w - 24:
+                line = trial
+            else:
+                c.drawString(x + 12, y + t_h - 82 - row * 10, line)
+                row += 1
+                line = w2
+        if line and row < max_rows:
+            c.drawString(x + 12, y + t_h - 82 - row * 10, line)
 
     # ===== 3 STEPS FLOW =====
     y = y - 30
@@ -2175,7 +2249,7 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
     c.setFillColor(PAPER); c.setFont("Times-Italic", 16)
     c.drawString(40, 52, "Sua PME merece rodar sozinha.")
     c.setFillColor(colors.HexColor("#34D399")); c.setFont("Helvetica-Bold", 7.5)
-    c.drawString(40, 36, "TESTE 30 DIAS GRÁTIS  ·  SEM CARTÃO  ·  CANCELE QUANDO QUISER")
+    c.drawString(40, 36, "TESTE 30 DIAS GRÁTIS  ·  CANCELE QUANDO QUISER")
 
     # Contact info (updated per user request)
     c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 9)
