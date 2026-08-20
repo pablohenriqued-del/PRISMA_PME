@@ -94,12 +94,21 @@ export default function Apresentacao() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <a
+              href={`${process.env.REACT_APP_BACKEND_URL}/api/public/apresentacao.pdf`}
+              target="_blank"
+              rel="noopener"
+              data-testid="download-pdf-btn"
+              className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md bg-[#0A0A14] text-[#F5F1EA] hover:bg-black text-xs"
+            >
+              <Download className="h-3.5 w-3.5" /> Baixar PDF one-page
+            </a>
             <button
               onClick={() => window.print()}
               data-testid="print-btn"
               className="hidden sm:flex items-center gap-2 h-9 px-3 rounded-md border border-black/10 bg-white hover:bg-black/5 text-xs"
             >
-              <Printer className="h-3.5 w-3.5" /> Baixar PDF
+              <Printer className="h-3.5 w-3.5" /> Imprimir esta página
             </button>
             <Link
               to="/login"
@@ -462,9 +471,14 @@ export default function Apresentacao() {
               <a href="mailto:vendas@prisma.com.br" className="inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-white/10">
                 Falar com o fundador
               </a>
-              <button onClick={() => window.print()} className="hidden sm:inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-white/10">
-                <Download className="h-4 w-4" /> Baixar PDF
-              </button>
+              <a
+                href={`${process.env.REACT_APP_BACKEND_URL}/api/public/apresentacao.pdf`}
+                target="_blank" rel="noopener"
+                data-testid="cta-pdf-btn"
+                className="hidden sm:inline-flex items-center gap-2 h-12 px-6 rounded-md border border-white/20 text-white/80 text-sm hover:bg-white/10"
+              >
+                <Download className="h-4 w-4" /> Baixar PDF one-page
+              </a>
             </div>
           </div>
         </div>

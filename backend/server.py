@@ -1889,6 +1889,249 @@ async def cop_list_reports(user: dict = Depends(current_user)):
     items = await db.copilot_reports.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
     return {"items": items}
 
+# ----------------- Public Sales PDF (one-page) -----------------
+@api.get("/public/apresentacao.pdf")
+async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = None):
+    """One-page elegant sales PDF for Prisma. Public, no auth. Optional query params
+    ?para=NomeCliente&valor=4500 personalize the hero.
+    """
+    from reportlab.pdfgen import canvas as _canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+    import qrcode
+    from PIL import Image as PILImage
+    from reportlab.lib.utils import ImageReader
+
+    W, H = A4  # 595.27 x 841.89 pt
+    buf = _io.BytesIO()
+    c = _canvas.Canvas(buf, pagesize=A4)
+
+    INK = colors.HexColor("#0A0A14")
+    PAPER = colors.HexColor("#F5F1EA")
+    MUTED = colors.HexColor("#6B6B75")
+    LINE = colors.HexColor("#D9D6CE")
+    EMERALD = colors.HexColor("#059669")
+    RED = colors.HexColor("#DC2626")
+
+    # Full paper background
+    c.setFillColor(PAPER); c.rect(0, 0, W, H, fill=1, stroke=0)
+
+    # ===== Header band =====
+    c.setFillColor(INK); c.rect(0, H - 70, W, 70, fill=1, stroke=0)
+    # Logo triangle
+    c.setFillColor(PAPER)
+    c.setLineJoin(1)
+    p = c.beginPath(); p.moveTo(48, H - 30); p.lineTo(72, H - 55); p.lineTo(24, H - 55); p.close()
+    c.drawPath(p, fill=1, stroke=0)
+    # Brand
+    c.setFillColor(PAPER); c.setFont("Times-Italic", 20); c.drawString(90, H - 42, "Prisma")
+    c.setFont("Helvetica", 7); c.setFillColor(colors.HexColor("#B6B4A9"))
+    c.drawString(90, H - 55, "PAINEL DE CONTROLE DA PME · pt-BR · PIX NATIVO")
+    # Top-right meta
+    c.setFillColor(PAPER); c.setFont("Helvetica", 8)
+    c.drawRightString(W - 40, H - 34, "Apresentação comercial")
+    c.setFont("Helvetica", 7); c.setFillColor(colors.HexColor("#B6B4A9"))
+    c.drawRightString(W - 40, H - 47, datetime.now().strftime("%d %B %Y").upper())
+
+    # ===== Hero =====
+    hero_top = H - 100
+    hero_h = 195
+    # Left half — headline
+    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, hero_top - 12, "SOFTWARE BRASILEIRO · IA NATIVA · SEM COMPLICAÇÃO")
+
+    c.setFillColor(INK)
+    # Personalized hero when 'para' present
+    if para:
+        c.setFont("Times-Roman", 30)
+        c.drawString(40, hero_top - 46, f"Feito sob medida")
+        c.setFont("Times-Italic", 30); c.drawString(40, hero_top - 78, f"para {para[:24]}.")
+    else:
+        c.setFont("Times-Roman", 32)
+        c.drawString(40, hero_top - 46, "Sua PME rodando em")
+        c.setFont("Times-Italic", 32); c.drawString(40, hero_top - 82, "piloto automático.")
+
+    c.setFillColor(MUTED); c.setFont("Helvetica", 10.5)
+    subtitle = [
+        "CRM, WhatsApp, Ordem de Serviço, Financeiro, Projetos e IA",
+        "no mesmo painel. Do primeiro contato ao PIX cair, sem trocar de aba.",
+    ]
+    for i, line in enumerate(subtitle):
+        c.drawString(40, hero_top - 108 - i * 15, line)
+
+    # 4 KPI stats row
+    stats = [("24h", "por semana", "menos planilha"),
+             ("3×", "para fechar", "OS + PIX no mesmo link"),
+             ("7min", "lead → PIX", "IA + assinatura embutida"),
+             ("R$ 0", "para começar", "30 dias grátis")]
+    stat_x = 40; stat_gap = 4
+    stat_w = (W - 80 - stat_gap * 3) / 4
+    stat_y = hero_top - 180
+    for i, (n, lbl, note) in enumerate(stats):
+        x = stat_x + i * (stat_w + stat_gap)
+        c.setFillColor(INK); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+        c.roundRect(x, stat_y, stat_w, 46, 6, fill=0, stroke=1)
+        c.setFont("Times-Roman", 22); c.drawString(x + 10, stat_y + 26, n)
+        c.setFillColor(colors.HexColor("#3A3A45")); c.setFont("Helvetica-Bold", 7.5)
+        c.drawString(x + 10, stat_y + 14, lbl.upper())
+        c.setFillColor(MUTED); c.setFont("Helvetica", 6.5)
+        c.drawString(x + 10, stat_y + 4, note)
+
+    # ===== 8 Modules grid =====
+    mod_top = stat_y - 24
+    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, mod_top, "8 MÓDULOS, 1 LOGIN")
+    c.setFillColor(INK); c.setFont("Times-Roman", 15)
+    c.drawString(40, mod_top - 20, "Tudo que sua PME precisa, ")
+    c.setFont("Times-Italic", 15); c.drawString(40 + c.stringWidth("Tudo que sua PME precisa, ", "Times-Roman", 15), mod_top - 20, "no mesmo painel.")
+
+    modules = [
+        ("CRM", "Kanban de leads, funil visual."),
+        ("WhatsApp", "Inbox unificada + Twilio real."),
+        ("Ordem de Serviço", "Orçamento → assinatura → PIX."),
+        ("Projetos", "Kanban · Lista · Calendário · Gantt."),
+        ("Financeiro", "Fluxo de caixa + cobrança PIX."),
+        ("Documentos", "Propostas e relatórios via IA."),
+        ("Automações", "Motor \u201cquando/então\u201d nativo."),
+        ("Copiloto IA", "Cria tarefas, propostas, relatórios."),
+    ]
+    mod_grid_top = mod_top - 32
+    cols = 4; rows = 2
+    gap = 6
+    card_w = (W - 80 - gap * (cols - 1)) / cols
+    card_h = 46
+    for i, (name, desc) in enumerate(modules):
+        r = i // cols; col = i % cols
+        x = 40 + col * (card_w + gap)
+        y = mod_grid_top - r * (card_h + gap) - card_h
+        c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+        c.roundRect(x, y, card_w, card_h, 6, fill=1, stroke=1)
+        # Small dot
+        c.setFillColor(INK); c.circle(x + 12, y + card_h - 14, 3, fill=1, stroke=0)
+        c.setFillColor(INK); c.setFont("Helvetica-Bold", 9)
+        c.drawString(x + 22, y + card_h - 17, name)
+        c.setFillColor(MUTED); c.setFont("Helvetica", 7.5)
+        # Word-wrap desc naive
+        c.drawString(x + 12, y + 12, desc[:56])
+
+    # ===== Flow timeline =====
+    flow_top = mod_grid_top - (rows * (card_h + gap)) - 12
+    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, flow_top, "DO LEAD AO PIX")
+    c.setFillColor(INK); c.setFont("Times-Roman", 15)
+    c.drawString(40, flow_top - 20, "7 minutos, ")
+    c.setFont("Times-Italic", 15); c.drawString(40 + c.stringWidth("7 minutos, ", "Times-Roman", 15), flow_top - 20, "de ponta a ponta.")
+
+    steps = [("0:00", "WhatsApp chega"), ("0:30", "Copiloto propõe"),
+             ("1:00", "OS enviada"), ("3:00", "Cliente assina"),
+             ("5:00", "PIX cai"), ("7:00", "Projeto abre")]
+    flow_line_y = flow_top - 46
+    c.setStrokeColor(LINE); c.setLineWidth(0.5)
+    c.line(52, flow_line_y, W - 52, flow_line_y)
+    step_w = (W - 104) / (len(steps) - 1)
+    for i, (t, lbl) in enumerate(steps):
+        cx = 52 + i * step_w
+        c.setFillColor(INK); c.circle(cx, flow_line_y, 4, fill=1, stroke=0)
+        c.setFillColor(INK); c.setFont("Helvetica-Bold", 8)
+        c.drawCentredString(cx, flow_line_y - 15, t)
+        c.setFillColor(MUTED); c.setFont("Helvetica", 7)
+        c.drawCentredString(cx, flow_line_y - 26, lbl)
+
+    # ===== Pricing =====
+    pr_top = flow_line_y - 46
+    c.setFillColor(colors.HexColor("#8A8880")); c.setFont("Helvetica-Bold", 7)
+    c.drawString(40, pr_top, "PLANOS · EM REAIS")
+    c.setFillColor(INK); c.setFont("Times-Roman", 15)
+    c.drawString(40, pr_top - 20, "Comece grátis. ")
+    c.setFont("Times-Italic", 15); c.drawString(40 + c.stringWidth("Comece grátis. ", "Times-Roman", 15), pr_top - 20, "Cresça quando fizer sentido.")
+
+    plans = [
+        {"n": "Free", "p": "R$ 0", "s": "para sempre", "hl": False,
+         "f": ["1 usuário", "CRM até 50 leads", "Copiloto 50 msgs/mês"]},
+        {"n": "Growth", "p": "R$ 897", "s": "/mês", "hl": True,
+         "f": ["Até 5 usuários", "WhatsApp real (Twilio)", "Copiloto ilimitado", "Automações ilimitadas"]},
+        {"n": "Business", "p": "R$ 2.997", "s": "/mês", "hl": False,
+         "f": ["Usuários ilimitados", "SLA 4h", "Onboarding assistido", "API pública"]},
+    ]
+    pr_grid_top = pr_top - 32
+    p_gap = 8
+    p_w = (W - 80 - p_gap * 2) / 3
+    p_h = 108
+    for i, pl in enumerate(plans):
+        x = 40 + i * (p_w + p_gap)
+        y = pr_grid_top - p_h
+        if pl["hl"]:
+            c.setFillColor(INK); c.setStrokeColor(INK); c.roundRect(x, y, p_w, p_h, 8, fill=1, stroke=1)
+            title_col = PAPER; muted_col = colors.HexColor("#B6B4A9"); check_col = colors.HexColor("#34D399")
+        else:
+            c.setFillColor(colors.white); c.setStrokeColor(LINE); c.setLineWidth(0.5)
+            c.roundRect(x, y, p_w, p_h, 8, fill=1, stroke=1)
+            title_col = INK; muted_col = MUTED; check_col = EMERALD
+        c.setFillColor(title_col); c.setFont("Helvetica-Bold", 10)
+        c.drawString(x + 12, y + p_h - 18, pl["n"])
+        if pl["hl"]:
+            c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 6.5)
+            c.drawRightString(x + p_w - 12, y + p_h - 15, "RECOMENDADO")
+        c.setFillColor(title_col); c.setFont("Times-Roman", 22)
+        c.drawString(x + 12, y + p_h - 42, pl["p"])
+        c.setFillColor(muted_col); c.setFont("Helvetica", 7.5)
+        c.drawString(x + 12 + c.stringWidth(pl["p"], "Times-Roman", 22) + 4, y + p_h - 42 + 4, pl["s"])
+        # Features
+        for j, feat in enumerate(pl["f"]):
+            fy = y + p_h - 60 - j * 12
+            c.setFillColor(check_col); c.setFont("Helvetica-Bold", 8)
+            c.drawString(x + 12, fy, "✓")
+            c.setFillColor(title_col if pl["hl"] else INK); c.setFont("Helvetica", 7.5)
+            c.drawString(x + 24, fy, feat[:38])
+
+    # Founder deal strip
+    fd_y = pr_grid_top - p_h - 12
+    c.setFillColor(colors.HexColor("#FFF7ED")); c.setStrokeColor(colors.HexColor("#F97316")); c.setLineWidth(0.8)
+    c.roundRect(40, fd_y - 30, W - 80, 30, 6, fill=1, stroke=1)
+    c.setFillColor(INK); c.setFont("Helvetica-Bold", 8)
+    c.drawString(52, fd_y - 12, "FOUNDER DEAL · VAGAS LIMITADAS")
+    c.setFont("Times-Roman", 12); c.drawString(52, fd_y - 26, "R$ 4.997 à vista = 3 anos de Growth")
+    c.setFillColor(MUTED); c.setFont("Helvetica", 7.5)
+    c.drawRightString(W - 52, fd_y - 20, "Trave o preço hoje. Depois vira Growth normal em 36 meses.")
+
+    # ===== Footer / CTA =====
+    footer_h = 70
+    c.setFillColor(INK); c.rect(0, 0, W, footer_h, fill=1, stroke=0)
+
+    # QR code
+    qr_url = "https://pme-all-in-one.preview.emergentagent.com/apresentacao"
+    if para:
+        qr_url += f"?para={para.replace(' ', '+')}"
+    if valor:
+        qr_url += f"{'&' if '?' in qr_url else '?'}valor={int(valor)}"
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=6, border=1)
+    qr.add_data(qr_url); qr.make(fit=True)
+    qr_img = qr.make_image(fill_color="#F5F1EA", back_color="#0A0A14").convert("RGB")
+    qr_buf = _io.BytesIO(); qr_img.save(qr_buf, format="PNG"); qr_buf.seek(0)
+    c.drawImage(ImageReader(qr_buf), W - 90, 10, width=50, height=50, mask="auto")
+
+    c.setFillColor(PAPER); c.setFont("Times-Italic", 15)
+    c.drawString(40, 44, "Sua PME merece rodar sozinha.")
+    c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 7.5)
+    c.drawString(40, 30, "TESTE 30 DIAS GRÁTIS · SEM CARTÃO · CANCELAMENTO A QUALQUER HORA")
+    c.setFillColor(PAPER); c.setFont("Helvetica-Bold", 9)
+    c.drawString(40, 14, "prisma.com.br  ·  vendas@prisma.com.br")
+
+    if valor:
+        c.setFillColor(colors.HexColor("#B6B4A9")); c.setFont("Helvetica", 6.5)
+        c.drawRightString(W - 100, 30, f"Proposta pré-preenchida · R$ {valor:,.2f}")
+
+    c.showPage(); c.save()
+    buf.seek(0)
+    from fastapi.responses import Response
+    fname = f"prisma-apresentacao-{para.replace(' ','_') if para else 'venda'}.pdf"
+    return Response(content=buf.getvalue(), media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{fname}"'})
+
+
+
 # ----------------- Startup / health -----------------
 @app.on_event("startup")
 async def startup():
