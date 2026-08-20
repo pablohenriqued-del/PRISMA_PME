@@ -17,6 +17,7 @@ import Team from "@/pages/Team";
 import Landing from "@/pages/Landing";
 import OrdemServico from "@/pages/OrdemServico";
 import OSPublica from "@/pages/OSPublica";
+import Apresentacao from "@/pages/Apresentacao";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 
 function AppRouter() {
@@ -30,6 +31,7 @@ function AppRouter() {
       <Route path="/login" element={<Login />} />
       <Route path="/payment/success" element={<PaymentSuccess />} />
       <Route path="/payment/cancel" element={<PaymentCancel />} />
+      <Route path="/apresentacao" element={<Apresentacao />} />
       <Route path="/os/publica/:token" element={<OSPublica />} />
       <Route path="/app" element={<AppShell />}>
         <Route index element={<Dashboard />} />
