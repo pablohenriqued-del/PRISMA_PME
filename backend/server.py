@@ -219,7 +219,8 @@ def storage_get(path: str) -> tuple[bytes, str]:
     return r.content, r.headers.get("Content-Type", "application/octet-stream")
 
 # ----------------- Email helper (Resend via Emergent) -----------------
-async def send_email(to_email: str, subject: str, html: str, reply_to: Optional[str] = None) -> Dict[str, Any]:
+async def send_email(to_email: str, subject: str, html: str, reply_to: Optional[str] = None,
+                     attachments: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
     if not EMAIL_KEY:
         return {"status": "skipped", "reason": "no_email_key"}
     payload = {
@@ -230,8 +231,11 @@ async def send_email(to_email: str, subject: str, html: str, reply_to: Optional[
     }
     if reply_to:
         payload["contact_email"] = reply_to
+    if attachments:
+        # Each attachment: {"filename": str, "content": base64_str}
+        payload["attachments"] = attachments
     try:
-        async with httpx.AsyncClient(timeout=30) as http:
+        async with httpx.AsyncClient(timeout=45) as http:
             r = await http.post(f"{EMAIL_BASE_URL}/api/v1/email/send",
                                 headers={"X-Email-Key": EMAIL_KEY}, json=payload)
         r.raise_for_status()
@@ -1503,12 +1507,28 @@ async def send_os(os_id: str, body: OSSendIn, user: dict = Depends(current_user)
         await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]}, {"$set": {"public_token": token}})
     url = _os_public_url(token, body.origin_url)
     results: Dict[str, Any] = {"url": url}
+
+    # Auto-generate personalized PDF to attach on the e-mail
+    attachments: List[Dict[str, Any]] = []
+    try:
+        pdf_bytes = await _generate_apresentacao_pdf(para=o.get("client_name") or "", valor=float(o.get("total") or 0))
+        import base64 as _b64
+        attachments.append({
+            "filename": f"proposta-prisma-{(o.get('client_name') or 'cliente').lower().replace(' ', '-')}.pdf",
+            "content": _b64.b64encode(pdf_bytes).decode("ascii"),
+        })
+    except Exception as e:
+        logging.warning(f"os pdf attach failed: {e}")
+
     if "email" in body.channels and o.get("client_email"):
-        results["email"] = await send_email(o["client_email"], f"Proposta — {o.get('title','')}", _os_html(o, url))
+        results["email"] = await send_email(o["client_email"], f"Proposta — {o.get('title','')}",
+                                            _os_html(o, url), attachments=attachments or None)
     if "whatsapp" in body.channels and o.get("client_phone"):
         results["whatsapp"] = await send_whatsapp(o["client_phone"], _os_wa_text(o, url))
     await db.ordem_servico.update_one({"os_id": os_id, "org_id": user["org_id"]},
-        {"$set": {"sent_at": iso(now_utc()), "sent_channels": body.channels}})
+        {"$set": {"sent_at": iso(now_utc()), "sent_channels": body.channels,
+                  "pdf_attached": bool(attachments)}})
+    results["pdf_attached"] = bool(attachments)
     return {"ok": True, **results}
 
 # ----------------- Portal público do cliente -----------------
@@ -2023,10 +2043,9 @@ async def cop_list_reports(user: dict = Depends(current_user)):
     items = await db.copilot_reports.find({"org_id": user["org_id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
     return {"items": items}
 
-# ----------------- Public Sales PDF (one-page) -----------------
-@api.get("/public/apresentacao.pdf")
-async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = None):
-    """One-page Dark SaaS sales PDF for Prisma. Public, no auth."""
+# ----------------- Public Sales PDF (one-page) helper -----------------
+async def _generate_apresentacao_pdf(para: Optional[str] = None, valor: Optional[float] = None) -> bytes:
+    """Renders the Dark SaaS one-pager and returns PDF bytes (used by public route + OS attach)."""
     from reportlab.pdfgen import canvas as _canvas
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -2437,10 +2456,304 @@ async def public_sales_pdf(para: Optional[str] = None, valor: Optional[float] = 
 
     c.showPage(); c.save()
     buf.seek(0)
+    return buf.getvalue()
+
+
+@api.get("/public/apresentacao.pdf")
+async def public_sales_pdf(request: Request, para: Optional[str] = None, valor: Optional[float] = None):
+    """Serves the personalized PDF + logs an open event for analytics."""
+    pdf_bytes = await _generate_apresentacao_pdf(para=para, valor=valor)
+    # Analytics tracking (fire-and-forget insert)
+    try:
+        await db.apresentacao_opens.insert_one({
+            "at": iso(now_utc()),
+            "kind": "pdf",
+            "para": para or "",
+            "valor": float(valor or 0),
+            "ip": request.client.host if request.client else "",
+            "ua": (request.headers.get("user-agent") or "")[:200],
+            "ref": request.headers.get("referer", "")[:200],
+        })
+    except Exception as e:
+        logging.warning(f"apresentacao open track failed: {e}")
     from fastapi.responses import Response
     fname = f"prisma-apresentacao-{para.replace(' ','_') if para else 'venda'}.pdf"
-    return Response(content=buf.getvalue(), media_type="application/pdf",
+    return Response(content=pdf_bytes, media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="{fname}"'})
+
+
+@api.post("/public/apresentacao/track-view")
+async def track_apresentacao_view(request: Request, para: Optional[str] = None, valor: Optional[float] = None,
+                                  duration_ms: Optional[int] = None):
+    """Called by the /apresentacao page to log page views + time-on-page."""
+    try:
+        await db.apresentacao_opens.insert_one({
+            "at": iso(now_utc()),
+            "kind": "page",
+            "para": para or "",
+            "valor": float(valor or 0),
+            "duration_ms": int(duration_ms or 0),
+            "ip": request.client.host if request.client else "",
+            "ua": (request.headers.get("user-agent") or "")[:200],
+            "ref": request.headers.get("referer", "")[:200],
+        })
+    except Exception as e:
+        logging.warning(f"page track failed: {e}")
+    return {"ok": True}
+
+
+# ----------------- Sales · gerador de link + envio + analytics -----------------
+class SalesLinkIn(BaseModel):
+    cliente: str
+    valor: Optional[float] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    channels: List[Literal["whatsapp", "email"]] = []
+    origin_url: Optional[str] = None
+    note: Optional[str] = None  # extra WhatsApp text
+
+@api.post("/sales/link")
+async def sales_generate_link(body: SalesLinkIn, user: dict = Depends(current_user)):
+    from urllib.parse import quote
+    origin = (body.origin_url or "https://pme-all-in-one.preview.emergentagent.com").rstrip("/")
+    qs = f"para={quote(body.cliente)}"
+    if body.valor: qs += f"&valor={int(body.valor)}"
+    page_url = f"{origin}/apresentacao?{qs}"
+    pdf_url = f"{origin}/api/public/apresentacao.pdf?{qs}"
+
+    results: Dict[str, Any] = {"page_url": page_url, "pdf_url": pdf_url}
+    body_txt = (
+        f"Olá, {body.cliente}! Preparei uma apresentação personalizada para você:\n{page_url}\n\n"
+        + (f"Investimento sugerido: R$ {body.valor:,.2f}\n\n" if body.valor else "")
+        + (body.note + "\n\n" if body.note else "")
+        + "Qualquer dúvida, é só responder por aqui. — Prisma"
+    )
+    if "whatsapp" in body.channels and body.phone:
+        results["whatsapp"] = await send_whatsapp(body.phone, body_txt)
+    if "email" in body.channels and body.email:
+        html = f"""
+<div style="font-family:Helvetica,Arial,sans-serif;background:#08090A;color:#EDEDED;padding:32px">
+  <div style="max-width:600px;margin:0 auto;background:#121214;border:1px solid #25252B;border-radius:12px;padding:32px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:3px;color:#71717A">Prisma · apresentação</div>
+    <h1 style="font-size:24px;color:#EDEDED;margin:12px 0 8px">Olá, {body.cliente}</h1>
+    <p style="color:#A1A1AA;line-height:1.6">Preparei uma apresentação personalizada para você. Você pode visualizar online ou baixar o PDF.</p>
+    {(f'<div style="margin:16px 0;padding:12px;border-radius:8px;background:#064E3B;color:#10B981;font-family:monospace">Investimento sugerido: R$ {body.valor:,.2f}</div>' if body.valor else '')}
+    <p style="text-align:center;margin:32px 0">
+      <a href="{page_url}" style="background:linear-gradient(90deg,#5E6AD2,#8B5CF6);color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600">Abrir apresentação</a>
+    </p>
+    <p style="text-align:center;font-size:12px"><a href="{pdf_url}" style="color:#8B5CF6">Ou baixar o PDF one-page</a></p>
+  </div>
+</div>"""
+        # attach PDF
+        try:
+            pdf_bytes = await _generate_apresentacao_pdf(para=body.cliente, valor=body.valor)
+            import base64 as _b64
+            attachments = [{"filename": f"prisma-{body.cliente.lower().replace(' ','-')}.pdf",
+                            "content": _b64.b64encode(pdf_bytes).decode("ascii")}]
+        except Exception:
+            attachments = None
+        results["email"] = await send_email(body.email, f"Apresentação Prisma para {body.cliente}",
+                                            html, attachments=attachments)
+    # Log this send for analytics
+    try:
+        await db.sales_sends.insert_one({
+            "org_id": user["org_id"], "cliente": body.cliente, "valor": body.valor,
+            "channels": body.channels, "at": iso(now_utc()),
+            "email": body.email or "", "phone": body.phone or "",
+            "sent_by": user.get("user_id"),
+        })
+    except Exception:
+        pass
+    return results
+
+
+@api.get("/sales/analytics")
+async def sales_analytics(user: dict = Depends(current_user)):
+    """Aggregated view: for each (cliente, valor) combo, how many opens + last open + avg time-on-page."""
+    opens = await db.apresentacao_opens.find({}, {"_id": 0}).sort("at", -1).to_list(2000)
+    sends = await db.sales_sends.find({"org_id": user["org_id"]}, {"_id": 0}).sort("at", -1).to_list(1000)
+    from collections import defaultdict
+    agg: Dict[str, Dict[str, Any]] = defaultdict(lambda: {
+        "cliente": "", "valor": 0, "pdf_opens": 0, "page_views": 0,
+        "avg_time_ms": 0, "_time_sum": 0, "_time_n": 0, "last_open": "",
+    })
+    for o in opens:
+        cli = (o.get("para") or "").strip()
+        if not cli: continue
+        key = f"{cli.lower()}|{int(o.get('valor') or 0)}"
+        a = agg[key]
+        a["cliente"] = cli
+        a["valor"] = o.get("valor") or 0
+        if o.get("kind") == "pdf": a["pdf_opens"] += 1
+        else: a["page_views"] += 1
+        if o.get("duration_ms"):
+            a["_time_sum"] += int(o["duration_ms"]); a["_time_n"] += 1
+        if not a["last_open"] or o.get("at", "") > a["last_open"]:
+            a["last_open"] = o.get("at", "")
+    for a in agg.values():
+        a["avg_time_ms"] = int(a["_time_sum"] / a["_time_n"]) if a["_time_n"] else 0
+        a.pop("_time_sum", None); a.pop("_time_n", None)
+    items = sorted(agg.values(), key=lambda x: -(x["pdf_opens"] + x["page_views"]))
+    return {
+        "items": items,
+        "totals": {
+            "sends": len(sends),
+            "pdf_opens": sum(a["pdf_opens"] for a in items),
+            "page_views": sum(a["page_views"] for a in items),
+        },
+        "recent_sends": sends[:20],
+    }
+
+
+# ----------------- Finance · cobrança PIX + import CSV -----------------
+class FinancePixIn(BaseModel):
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    channels: List[Literal["whatsapp", "email"]] = []
+    origin_url: Optional[str] = None
+
+@api.post("/finance/{tx_id}/send-pix")
+async def finance_send_pix(tx_id: str, body: FinancePixIn, user: dict = Depends(current_user)):
+    tx = await db.finance.find_one({"tx_id": tx_id, "org_id": user["org_id"]}, {"_id": 0})
+    if not tx: raise HTTPException(404, "Lançamento não encontrado")
+    if tx["kind"] != "receita":
+        raise HTTPException(400, "Só é possível cobrar PIX em lançamentos de receita")
+
+    amount_cents = int(round(float(tx["amount"]) * 100))
+    origin = (body.origin_url or "https://pme-all-in-one.preview.emergentagent.com").rstrip("/")
+    session_kwargs = dict(
+        mode="payment",
+        line_items=[{
+            "price_data": {
+                "currency": "brl",
+                "product_data": {"name": tx.get("description") or "Cobrança Prisma"},
+                "unit_amount": amount_cents,
+            },
+            "quantity": 1,
+        }],
+        success_url=f"{origin}/payment/success?session_id={{CHECKOUT_SESSION_ID}}",
+        cancel_url=f"{origin}/payment/cancel",
+        metadata={"tx_id": tx_id, "org_id": user["org_id"], "kind": "finance_receivable"},
+    )
+    # Prefer PIX + card. Fall back to card-only if PIX isn't enabled on this Stripe account.
+    session = None
+    try:
+        session = stripe.checkout.Session.create(payment_method_types=["pix", "card"], **session_kwargs)
+    except Exception as e:
+        if "pix" in str(e).lower():
+            try:
+                session = stripe.checkout.Session.create(payment_method_types=["card"], **session_kwargs)
+            except Exception as e2:
+                raise HTTPException(502, f"Stripe: {str(e2)[:200]}")
+        else:
+            raise HTTPException(502, f"Stripe: {str(e)[:200]}")
+    checkout_url = session.url
+
+    await db.finance.update_one({"tx_id": tx_id, "org_id": user["org_id"]},
+        {"$set": {"pix_checkout_url": checkout_url, "pix_session_id": session.id,
+                  "pix_generated_at": iso(now_utc())}})
+
+    client_name = tx.get("client_name") or "Cliente"
+    results: Dict[str, Any] = {"checkout_url": checkout_url}
+    body_txt = (
+        f"Olá, {client_name}! Segue o link para pagamento PIX:\n\n"
+        f"*{tx.get('description')}*\nValor: *R$ {float(tx['amount']):,.2f}*\n\n"
+        f"Pagar agora: {checkout_url}\n\n— Prisma"
+    )
+    if "whatsapp" in body.channels and body.phone:
+        results["whatsapp"] = await send_whatsapp(body.phone, body_txt)
+    if "email" in body.channels and body.email:
+        html = f"""
+<div style="font-family:Helvetica,Arial,sans-serif;background:#08090A;color:#EDEDED;padding:32px">
+  <div style="max-width:560px;margin:0 auto;background:#121214;border:1px solid #25252B;border-radius:12px;padding:28px">
+    <div style="font-size:10px;text-transform:uppercase;letter-spacing:3px;color:#71717A">Cobrança · Prisma</div>
+    <h2 style="color:#EDEDED;margin:12px 0">Olá, {client_name}</h2>
+    <p style="color:#A1A1AA">Seu link para pagamento via PIX está pronto:</p>
+    <div style="margin:16px 0;padding:16px;border-radius:8px;background:#064E3B;color:#10B981">
+      <div style="font-size:12px;letter-spacing:2px;text-transform:uppercase">{tx.get('description')}</div>
+      <div style="font-size:24px;font-weight:700;margin-top:4px">R$ {float(tx['amount']):,.2f}</div>
+    </div>
+    <p style="text-align:center;margin:24px 0">
+      <a href="{checkout_url}" style="background:linear-gradient(90deg,#10B981,#059669);color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600">Pagar PIX agora</a>
+    </p>
+    <p style="font-size:11px;color:#71717A">Confirmação em segundos. Pagamento seguro via Stripe.</p>
+  </div>
+</div>"""
+        results["email"] = await send_email(body.email, f"Cobrança Prisma · R$ {float(tx['amount']):,.2f}", html)
+    return {"ok": True, **results}
+
+
+@api.post("/finance/import-csv")
+async def finance_import_csv(file: UploadFile = File(...), user: dict = Depends(current_user)):
+    """Import bank statement CSV (semicolon or comma). Detects columns by header keywords."""
+    content = (await file.read()).decode("utf-8-sig", errors="ignore")
+    if not content.strip():
+        raise HTTPException(400, "Arquivo vazio")
+    # Detect delimiter
+    delim = ";" if content.count(";") > content.count(",") else ","
+    import csv as _csv
+    reader = _csv.reader(_io.StringIO(content), delimiter=delim)
+    rows = list(reader)
+    if len(rows) < 2:
+        raise HTTPException(400, "CSV precisa de header + pelo menos 1 linha")
+    headers = [h.strip().lower() for h in rows[0]]
+    def col(*names):
+        for i, h in enumerate(headers):
+            if any(n in h for n in names): return i
+        return None
+    ci_desc = col("descri", "hist", "memo")
+    ci_amt  = col("valor", "amount", "montante")
+    ci_date = col("data", "date")
+    ci_cat  = col("categ")
+    ci_kind = col("tipo", "kind")
+    if ci_desc is None or ci_amt is None or ci_date is None:
+        raise HTTPException(400, "CSV precisa ter colunas de Descrição, Valor e Data")
+
+    inserted = 0
+    for row in rows[1:]:
+        if not row or len(row) <= max(ci_desc, ci_amt, ci_date): continue
+        desc = row[ci_desc].strip()
+        raw_amt = row[ci_amt].strip().replace("R$", "").replace(" ", "")
+        # BR format "1.234,56" -> "1234.56"; also accept "-100,50"
+        clean = raw_amt.replace(".", "").replace(",", ".") if "," in raw_amt else raw_amt
+        try:
+            amt = float(clean)
+        except Exception:
+            continue
+        date = row[ci_date].strip()
+        # normalize dd/mm/yyyy -> yyyy-mm-dd
+        if "/" in date:
+            parts = date.split("/")
+            if len(parts) == 3:
+                d, m, y = parts
+                if len(y) == 2: y = "20" + y
+                date = f"{y}-{m.zfill(2)}-{d.zfill(2)}"
+        # infer kind
+        kind = None
+        if ci_kind is not None and ci_kind < len(row):
+            v = row[ci_kind].strip().lower()
+            if "receita" in v or "credit" in v: kind = "receita"
+            elif "despesa" in v or "debit" in v: kind = "despesa"
+        if kind is None:
+            kind = "receita" if amt >= 0 else "despesa"
+        cat = row[ci_cat].strip() if (ci_cat is not None and ci_cat < len(row)) else "Importado"
+        await db.finance.insert_one({
+            "tx_id": gen_id("tx"),
+            "org_id": user["org_id"],
+            "description": desc or "Importado",
+            "amount": abs(amt),
+            "kind": kind,
+            "date": date,
+            "due_date": date,
+            "status": "pago",
+            "paid_date": date,
+            "category": cat or "Importado",
+            "client_name": "",
+            "notes": "Importado via CSV",
+            "created_at": iso(now_utc()),
+        })
+        inserted += 1
+    return {"ok": True, "inserted": inserted}
 
 
 # ----------------- Startup / health -----------------

@@ -60,8 +60,32 @@ export default function Apresentacao() {
     document.title = cliente ? `Prisma · Proposta para ${cliente}` : "Prisma · Apresentação Comercial";
     const onScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, [cliente]);
+    // Fire-and-forget page-view tracking + time-on-page beacon on unload
+    const start = Date.now();
+    try {
+      const qs = new URLSearchParams();
+      if (cliente) qs.set("para", cliente);
+      if (valor) qs.set("valor", String(valor));
+      fetch(`${process.env.REACT_APP_BACKEND_URL}/api/public/apresentacao/track-view?${qs.toString()}`, { method: "POST" }).catch(() => {});
+    } catch {}
+    const beacon = () => {
+      try {
+        const qs = new URLSearchParams();
+        if (cliente) qs.set("para", cliente);
+        if (valor) qs.set("valor", String(valor));
+        qs.set("duration_ms", String(Date.now() - start));
+        const url = `${process.env.REACT_APP_BACKEND_URL}/api/public/apresentacao/track-view?${qs.toString()}`;
+        if (navigator.sendBeacon) navigator.sendBeacon(url);
+        else fetch(url, { method: "POST", keepalive: true }).catch(() => {});
+      } catch {}
+    };
+    window.addEventListener("beforeunload", beacon);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("beforeunload", beacon);
+      beacon();
+    };
+  }, [cliente, valor]);
 
   const pdfUrl = useMemo(() => {
     const qs = new URLSearchParams();

@@ -18,6 +18,7 @@ import Landing from "@/pages/Landing";
 import OrdemServico from "@/pages/OrdemServico";
 import OSPublica from "@/pages/OSPublica";
 import Apresentacao from "@/pages/Apresentacao";
+import Vendas from "@/pages/Vendas";
 import { PaymentSuccess, PaymentCancel } from "@/pages/PaymentResult";
 
 function AppRouter() {
@@ -37,6 +38,7 @@ function AppRouter() {
         <Route index element={<Dashboard />} />
         <Route path="crm" element={<CRM />} />
         <Route path="os" element={<OrdemServico />} />
+        <Route path="vendas" element={<Vendas />} />
         <Route path="whatsapp" element={<WhatsAppInbox />} />
         <Route path="projetos" element={<Projetos />} />
         <Route path="financeiro" element={<Financeiro />} />

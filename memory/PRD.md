@@ -1,47 +1,76 @@
 # Prisma — PRD
 
-## Problema
-Plataforma modular para PMEs brasileiras. Une CRM, WhatsApp, Projetos, Financeiro, Documentos, Ordem de Serviço, Automações, Copiloto IA e Portal do Cliente com pagamento PIX.
+## Original Problem Statement
+Plataforma modular para PMEs (Prisma) com IA nativa (Copiloto), automações, WhatsApp, Projetos e CRM. Sistema atua como o "painel de controle" central da PME.
 
-## Módulos (v2.0 — 2026-02-28 · Dark SaaS Redesign)
-- **Copiloto IA operacional** — Claude Sonnet 4.5 streaming + ações (criar tarefa, gerar proposta, gerar relatório).
-- **CRM** — Kanban de leads.
-- **Ordem de Serviço** — Custom fields, recorrência, templates, envio automático (email + WhatsApp), portal público, assinatura eletrônica com hash, PDF de comprovante, cobrança PIX/cartão.
-- **Portal do Cliente (público)** — `/os/publica/{token}`.
-- **WhatsApp** — Inbox + Twilio Sandbox `whatsapp:+14155238886`.
-- **Projetos** — 4 views (Kanban/Lista/Calendário/Gantt), time tracker, custom fields, comentários com @menções.
-- **Notificações** — Sino no header com badge unread.
-- **Financeiro** — Fluxo de caixa.
-- **Documentos** — Upload + propostas/relatórios do Copiloto.
-- **Automações** — Motor real.
-- **Equipe** — Convites por e-mail.
-- **Dashboards** — KPIs + gráficos.
-- **Landing** — Redesenhada com dark SaaS moderno (Linear/Vercel style).
-- **Apresentação /apresentacao** — one-page comercial.
-- **PDF elegante /api/public/apresentacao.pdf** — reportlab + QR + ROI + Sem/Com Prisma.
+## Design System
+- **Dark SaaS moderno** (Linear/Vercel style). Fundo `#08090A`, superfícies `#121214`, brand purple `#5E6AD2` → violet `#8B5CF6`. Fonte Outfit/Inter.
+- Consultar `/app/design_guidelines.json` antes de qualquer mudança de UI.
 
-## Design v2.0 (2026-02-28)
-- **Tema**: Dark SaaS moderno (Linear/Vercel/Cursor inspired). Fonte Outfit + Inter + JetBrains Mono.
-- **Paleta**: fundo `#08090A`, surface `#0F0F12`, primary gradiente `#5E6AD2 → #8B5CF6 → #00E5FF`.
-- **Gradient meshes** na hero, glow effects, bento grid, marquee de logos.
-- Todas as páginas migradas para dark theme via CSS variables + sed bulk transform.
-- Landing.jsx e Login.jsx reescritos com bento grid, dashboard mockup animado, testimonial cards com estrelas.
-- AppShell com sidebar dark, item ativo com barra gradient à esquerda, avatar com ring, botão Copiloto com gradiente sutil.
+## Users
+- Pequenas e médias empresas brasileiras. Owner é `pablohenriqued@gmail.com`.
 
-## Backlog priorizado
-### P0 (próximas 5 features solicitadas)
-- Logo do cliente no PDF (co-branded).
-- Depoimentos com foto + resultado quantificado.
-- Anexar PDF automaticamente no envio da OS.
-- Tela "Vendas → Nova apresentação" (gerador de link/PDF).
-- Conectar geração de PDF ao Copiloto por linguagem natural.
+## Módulos Implementados
+- **Dashboard**
+- **CRM** com kanban, edit dialog, campo **Sistema oferecido** (BR PREDICT · PLENUS · PROVENANCE · M&A · CJUDI · PMO · PRISMA)
+- **Ordem de Serviço** com recorrência, templates, portal público, assinatura eletrônica, Stripe PIX checkout, **auto-anexo do PDF one-page no e-mail**
+- **WhatsApp** (Twilio Sandbox — `join swim-tie`)
+- **Projetos** com Kanban · Lista · Calendário · Gantt · @mentions
+- **Vendas · Nova apresentação** (`/app/vendas`) — gerador de link personalizado + PDF one-page + envio WhatsApp/e-mail + Analytics (opens do PDF, page views, tempo médio)
+- **Financeiro completo**
+  - Modelo expandido (due_date, paid_date, status pendente/pago/vencido, category, client_name, recurrence)
+  - Filtros por período (Mês / 30d / 90d / Ano / Tudo) + kind + status
+  - 4 KPIs com delta vs mês anterior
+  - Gráfico de área (receita × despesa) + donut de categorias
+  - DRE simplificado + Fluxo projetado 90 dias
+  - **Cobrança PIX** (Stripe) por lançamento com envio WhatsApp/e-mail (fallback card se PIX não habilitado)
+  - **Import CSV** (extrato bancário — auto-detecta delimitador e formato BR)
+  - Export CSV com BOM UTF-8
+- **Documentos** (upload + IA)
+- **Automações** (motor quando/então)
+- **Equipe** (roles owner/admin/member)
+- **Copiloto IA** (Claude Sonnet 4.6 via Emergent LLM Key) — intents nativos incluindo `gere apresentação para <X> por <Y>` que devolve card com PDF + link página + copiar
 
-### P1
-- Ativar Twilio WhatsApp Sender dedicado (hoje Sandbox exige "join swim-tie").
-- Notificar dono no WhatsApp quando cliente assina/paga.
+## Rotas Públicas
+- `/` — Landing (Dark SaaS)
+- `/apresentacao?para=X&valor=Y` — One-page comercial personalizado (Dark SaaS) com tracking de view + duração
+- `/api/public/apresentacao.pdf?para=X&valor=Y` — PDF Dark SaaS em ReportLab com fotos + depoimentos + tracking de aberturas
+- `/os/publica/:token` — Portal do cliente
 
-### P2
-- Domínio prisma.com.br.
-- Split de `server.py` em módulos.
-- Copilot tool-calling nativo.
-- Portal do colaborador (link por tarefa).
+## Integrações 3rd Party
+- OpenAI GPT-4o + Claude Sonnet 4.6 (Emergent LLM Key)
+- Twilio (WhatsApp Sandbox) — user API key
+- Stripe (Payments, PIX + Card) — test mode
+- Resend (E-mail via Emergent) — auto attach PDF em OS/apresentação
+
+## API Endpoints Recentes Adicionados
+- `GET /api/public/apresentacao.pdf` (tracking + Dark PDF)
+- `POST /api/public/apresentacao/track-view` (page view + duration_ms)
+- `POST /api/sales/link` (gera link + envia WhatsApp/e-mail com PDF anexo)
+- `GET /api/sales/analytics` (aberturas por cliente, tempo médio, envios recentes)
+- `POST /api/finance/{tx_id}/send-pix` (cobrança PIX via Stripe + envio)
+- `POST /api/finance/import-csv` (import extrato)
+- `GET /api/finance` (com filtros date_from/to, kind, status, category)
+- `PATCH /api/finance/{tx_id}` (marcar pago etc)
+- `GET /api/finance/summary` (DRE + projeção 90d)
+- `GET /api/finance/export.csv`
+- Extended `POST /api/os/{os_id}/send` — agora auto-anexa PDF personalizado
+
+## DB Collections
+- `orgs`, `users`, `user_sessions`
+- `leads` (com `system`), `os`, `os_templates`
+- `finance` (com due_date, paid_date, status, category, client_name, recurrence, pix_checkout_url)
+- `projects`, `tasks`, `comments`
+- `documents`, `automations`, `whatsapp_messages`
+- `sales_sends`, `apresentacao_opens` (analytics)
+
+## Roadmap (P1/P2)
+- Cobrança recorrente automática (worker que cria tx do próximo período quando marcar pago)
+- Logo do cliente no PDF (upload por org + no PDF ao lado do Prisma)
+- Import OFX bancário (extrair além de CSV)
+- Analytics: geo/device breakdown das aberturas
+- SaaS billing (assinatura Growth/Business real via Stripe subscriptions)
+- Módulo BR PREDICT/PLENUS/PROVENANCE etc como whitelabel do Prisma
+
+## Test Credentials
+Ver `/app/memory/test_credentials.md`.

@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, TrendingUp, TrendingDown, Trash2, Check, Download, Repeat, Wallet, AlertTriangle, Clock, PiggyBank } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, Trash2, Check, Download, Repeat, Wallet, AlertTriangle, Clock, PiggyBank, CreditCard, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RTooltip, AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 
@@ -65,7 +65,7 @@ export default function Financeiro() {
     const s = await api.get("/finance/summary");
     setSummary(s.data);
   };
-  useEffect(() => { load(); }, [params]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { load(); }, [params]);
 
   const create = async (e) => {
     e.preventDefault();
@@ -90,6 +90,49 @@ export default function Financeiro() {
     catch { toast.error("Falha ao atualizar"); }
   };
   const del = async (id) => { if (!window.confirm("Excluir lançamento?")) return; await api.delete(`/finance/${id}`); load(); };
+
+  const [pixOpen, setPixOpen] = useState(false);
+  const [pixTx, setPixTx] = useState(null);
+  const [pixForm, setPixForm] = useState({ email: "", phone: "" });
+  const openPix = (tx) => { setPixTx(tx); setPixForm({ email: "", phone: "" }); setPixOpen(true); };
+  const sendPix = async (channels) => {
+    if (!pixTx) return;
+    try {
+      const r = await api.post(`/finance/${pixTx.tx_id}/send-pix`, {
+        email: pixForm.email || null, phone: pixForm.phone || null, channels,
+        origin_url: window.location.origin,
+      });
+      if (channels.includes("whatsapp")) {
+        if (r.data.whatsapp?.status === "sent") toast.success("WhatsApp enviado");
+        else if (r.data.whatsapp?.status === "error") toast.error(r.data.whatsapp.hint || "Falha WhatsApp");
+      }
+      if (channels.includes("email")) {
+        if (r.data.email?.status === "sent") toast.success("E-mail enviado");
+        else if (r.data.email?.status === "error") toast.error("Falha e-mail");
+      }
+      if (!channels.length) {
+        navigator.clipboard.writeText(r.data.checkout_url);
+        toast.success("Link PIX copiado");
+      }
+      setPixOpen(false); load();
+    } catch (e) {
+      toast.error(e?.response?.data?.detail || "Falha ao gerar PIX");
+    }
+  };
+
+  const importCsv = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const fd = new FormData(); fd.append("file", file);
+    try {
+      const r = await api.post("/finance/import-csv", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success(`${r.data.inserted} lançamentos importados`);
+      load();
+    } catch (err) {
+      toast.error(err?.response?.data?.detail || "Falha ao importar CSV");
+    }
+    e.target.value = "";
+  };
 
   // Series for area chart
   const series = useMemo(() => {
@@ -124,6 +167,10 @@ export default function Financeiro() {
           <p className="text-zinc-400 mt-2 text-sm">A receber, a pagar, DRE mensal, categorias e fluxo projetado 90 dias.</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <label className="h-10 px-3 rounded-md border border-white/10 bg-white/[0.02] text-zinc-200 hover:bg-white/[0.06] cursor-pointer inline-flex items-center gap-2 text-sm" data-testid="import-csv-label">
+            <Upload className="h-4 w-4" /> Importar CSV
+            <input type="file" accept=".csv" onChange={importCsv} className="hidden" data-testid="import-csv-input" />
+          </label>
           <Button variant="outline" onClick={exportCsv} data-testid="export-csv" className="h-10 border-white/10 bg-white/[0.02] text-zinc-200 hover:bg-white/[0.06]">
             <Download className="h-4 w-4 mr-2" /> Exportar CSV
           </Button>
@@ -207,6 +254,38 @@ export default function Financeiro() {
           </Dialog>
         </div>
       </div>
+
+      {/* PIX Dialog */}
+      <Dialog open={pixOpen} onOpenChange={setPixOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader><DialogTitle>Cobrar via PIX</DialogTitle></DialogHeader>
+          {pixTx && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg border border-white/10 bg-white/[0.02] p-3">
+                <div className="text-xs text-zinc-500">Lançamento</div>
+                <div className="font-medium text-zinc-100 mt-1">{pixTx.description}</div>
+                <div className="mt-2 font-mono text-2xl text-emerald-400">{brl(pixTx.amount)}</div>
+              </div>
+              <div><Label>E-mail do cliente</Label><Input type="email" data-testid="pix-email" value={pixForm.email} onChange={(e) => setPixForm({ ...pixForm, email: e.target.value })} placeholder="cliente@empresa.com" /></div>
+              <div><Label>WhatsApp do cliente</Label><Input data-testid="pix-phone" value={pixForm.phone} onChange={(e) => setPixForm({ ...pixForm, phone: e.target.value })} placeholder="+5521987654321" /></div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button onClick={() => sendPix([])} data-testid="pix-only-link" className="btn-secondary">Só copiar link</Button>
+                <Button onClick={() => sendPix(["whatsapp"])} disabled={!pixForm.phone} data-testid="pix-wa"
+                        className="h-10 px-4 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 text-sm">
+                  WhatsApp
+                </Button>
+                <Button onClick={() => sendPix(["email"])} disabled={!pixForm.email} data-testid="pix-mail"
+                        className="h-10 px-4 rounded-md bg-[#5E6AD2]/15 border border-[#5E6AD2]/30 text-[#c9c2ff] hover:bg-[#5E6AD2]/25 text-sm">
+                  E-mail
+                </Button>
+                <Button onClick={() => sendPix(["whatsapp", "email"])} disabled={!pixForm.phone && !pixForm.email} data-testid="pix-both" className="btn-primary ml-auto">
+                  Enviar tudo
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* KPI cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -365,6 +444,13 @@ export default function Financeiro() {
                 </TableCell>
                 <TableCell className="w-24">
                   <div className="flex items-center justify-end gap-1">
+                    {t.kind === "receita" && t.status !== "pago" && (
+                      <button data-testid={`pix-${t.tx_id}`} onClick={() => openPix(t)}
+                              title="Cobrar via PIX"
+                              className="p-1.5 rounded hover:bg-[#5E6AD2]/15 text-[#8B5CF6] transition-colors">
+                        <CreditCard className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                     {t.status !== "pago" && (
                       <button data-testid={`mark-paid-${t.tx_id}`} onClick={() => markPaid(t)}
                               title="Marcar como pago"
